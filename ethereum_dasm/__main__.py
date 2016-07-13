@@ -1,4 +1,4 @@
-import edasm
+import evmdasm
 
 if __name__ == '__main__':
-    edasm.main()
+    evmdasm.main()
