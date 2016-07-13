@@ -314,29 +314,25 @@ Options:
 ```python
 #> python ethereum_dasm contract_0x4432979c7c6bdd19f9ef20787c4ac9cc9710667b.evm
 ...
-[  1350]   1996 MULMOD                     # Modulo
-[  1351]   1997 CALLCODE                   # Message-call into this account with alternative accounts code.
-[  1352]   1998 DUP15                   # Duplicate 15th stack item.
-[  1353]   1999 DUP7                   # Duplicate 7th stack item.
-[  1354]   2000 STOP                   # Halts execution.
-2016-07-14 00:34:22,263 - ERROR - error: byte at position 2001 (0xb4) is not a v
-alid operator
+[  1350]   1996 MULMOD                         # Modulo
+[  1351]   1997 CALLCODE                       # Message-call into this account with alternative accounts code.
+[  1352]   1998 DUP15                          # Duplicate 15th stack item.
+[  1353]   1999 DUP7                           # Duplicate 7th stack item.
+[  1354]   2000 STOP                           # Halts execution.
+2016-07-14 00:34:22,263 - ERROR - error: byte at position 2001 (0xb4) is not a valid operator
 Traceback (most recent call last):
   File "ethereum_dasm\evmdasm.py", line 208, in disassemble
     mnemonic = self.OPCODE_TABLE[opcode].consume(iter_bytecode)
 KeyError: 180
-[  1355]   2001 UNKNOWN_0xb4                   # error: byte at position 2001 (0xb4) is not a valid operator
-; KeyError(180,)
-2016-07-14 00:34:22,263 - ERROR - error: byte at position 2002 (0xaa) is not a v
-alid operator
+[  1355]   2001 UNKNOWN_0xb4                   # error: byte at position 2001 (0xb4) is not a valid operator; KeyError(180,)
+2016-07-14 00:34:22,263 - ERROR - error: byte at position 2002 (0xaa) is not a valid operator
 Traceback (most recent call last):
   File "ethereum_dasm\evmdasm.py", line 208, in disassemble
     mnemonic = self.OPCODE_TABLE[opcode].consume(iter_bytecode)
 KeyError: 170
-[  1356]   2002 UNKNOWN_0xaa                   # error: byte at position 2002 (0xaa) is not a valid operator
-; KeyError(170,)
-[  1357]   2003 DUP13                   # Duplicate 13th stack item.
-[  1358]   2004 PUSH6           0xc6b64bfe7fe3                   # Place 6-byte item on stack.
-[  1359]   2011 PUSH12          0xd19b                   # Place 12-byte item on stack.
+[  1356]   2002 UNKNOWN_0xaa                   # error: byte at position 2002 (0xaa) is not a valid operator; KeyError(170,)
+[  1357]   2003 DUP13                          # Duplicate 13th stack item.
+[  1358]   2004 PUSH6           0xc6b64bfe7fe3 # Place 6-byte item on stack.
+[  1359]   2011 PUSH12          0xd19b         # Place 12-byte item on stack.
 2016-07-14 00:34:22,279 - WARNING - disassembly finished with 12 errors
 ```
