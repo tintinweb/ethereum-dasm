@@ -266,7 +266,7 @@ def main():
                                                 "0x%s"%nm.operand if nm.operand else '',
                                                 nm.description)
             
-    logger.warning("finished in %0.3f seconds."%(time.time()-t_start))
+    logger.info("finished in %0.3f seconds."%(time.time()-t_start))
     # post a notification that disassembly might be incorrect due to errors
     if evm_dasm.errors:
         logger.warning("disassembly finished with %d errors"%len(evm_dasm.errors))
