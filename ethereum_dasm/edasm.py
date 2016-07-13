@@ -217,7 +217,7 @@ class EVMAnalyzer(object):
             pos += mnemonic.size() 
             yield mnemonic
 
-if __name__=="__main__":
+def main():
     logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s")
     from optparse import OptionParser
     usage = """usage: %prog [options]
@@ -273,3 +273,6 @@ if __name__=="__main__":
         
     
     sys.exit(len(evm_dasm.errors))
+    
+if __name__=="__main__":
+    main()
