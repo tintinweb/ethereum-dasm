@@ -185,8 +185,9 @@ OPCODES = [ # Stop and Arithmetic Operations
 class EVMAnalyzer(object):
     OPCODE_TABLE = dict((obj.opcode, obj) for obj in OPCODES)
     
-    def __init__(self):
+    def __init__(self, debug=False):
         self.errors = []
+        self.debug = debug
     
     def disassemble(self, bytecode):
         def iterbytes(bytecode):
@@ -208,7 +209,8 @@ class EVMAnalyzer(object):
                 mnemonic = self.OPCODE_TABLE[opcode].consume(iter_bytecode)
             except KeyError,ke:
                 msg = "error: byte at position %d (%s) is not a valid operator"%(pos,hex(opcode))
-                logger.exception(msg)
+                if self.debug:
+                    logger.exception(msg)
                 mnemonic = Mnemonic(opcode=opcode, 
                                     name="UNKNOWN_%s"%hex(opcode), 
                                     description="%s; %r"%(msg,ke))
@@ -235,7 +237,8 @@ def main():
     (options, args) = parser.parse_args()
     
     if options.verbosity.upper() in loglevels:
-        logger.setLevel(getattr(logging,options.verbosity.upper()))
+        options.verbosity = getattr(logging,options.verbosity.upper())
+        logger.setLevel(options.verbosity)
     else:
         parser.error("invalid verbosity selected. please check --help")
         
@@ -249,7 +252,7 @@ def main():
             evmcode = args[0]
     
     # init analyzer
-    evm_dasm = EVMAnalyzer()
+    evm_dasm = EVMAnalyzer(debug=options.verbosity)
     logger.debug(EVMAnalyzer.OPCODE_TABLE)
     
     t_start = time.time()
