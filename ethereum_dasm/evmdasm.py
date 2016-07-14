@@ -210,9 +210,20 @@ class EVMCode(object):
         self.first = None
         self.last = None
         self.duration = None
+        
+        self.instruction_at = {}            # address:instruction
+        self.name_for_address = {}          # address:name
+        self.xrefs = {}                     # address:set(ref istruction,ref instruction)
     
     def assemble(self, instructions):
         return '0x'+''.join(inst.serialize() for inst in instructions)
+    
+    def _iter(self, first=None):
+        current = first or self.first
+        yield current
+        while current.next:
+            current = current.next
+            yield current
     
     def disassemble(self, bytecode=None):
         '''
@@ -225,61 +236,28 @@ class EVMCode(object):
             disasm = list(self.dis.disassemble(bytecode))
             self.first = disasm[0]
             self.last = disasm[-1]
-            self._update_xrefs(self.last)
+            self._update_address_space(self.first)
+            self._update_xrefs()
             self.duration = time.time()-t_start
-        elif self.first and self.last:
-            # cached
-            pass
-        current = self.first
-        
-        yield current
-        while current.next:
-            current = current.next
-            yield current
-        
-    def _update_xrefs(self, last_instruction):
-        # track xrefs
-        jump_destinations = {}          # addr : set([instruction, ..]))
-        labels = {}
-        logger.warning("updating xrefs, build jumptable")
-        # backwards resolve all xrefs
-        current = last_instruction
-        while current.previous:
-            if current.name in ('JUMP', 'JUMPI'):
-                loc = self._resolve_jump_destination(current) # updates current.jumpto
-                if loc:
-                    jump_destinations.setdefault(current.jumpto, set([]))
-                    jump_destinations[current.jumpto].add(current)
-                    current.tintin=True
-            elif current.name in ('JUMPDEST',):
-                labels[current.address] = current
-            current = current.previous
-        
-        logger.warning("update objects")
-        # now update all the objects
-        current = last_instruction
-        while current.previous:
-            xrefs = jump_destinations.get(current.address)
-            if xrefs:
-                if not current.name=="JUMPDEST":
-                    logger.warning("NOT A JUMPDEST!")
-                current.xrefs.update(xrefs)
-                del(jump_destinations[current.address])     # remove from jump_table
-                logger.warning("updated %s"%current)
-            current = current.previous
-        # xrefs resolved, forward and backward
-        # print all items that have not been resolved, indicating errors
-        for loc, xrefs in jump_destinations.iteritems():
-            logger.warning("Invalid xref to %s from %r"%(hex(loc),xrefs))
-        # check all jumpdests for xrefs
-        for loc, instruction in labels.iteritems():
-            logger.warning("JUMPDEST without a ref: %r"%instruction)
-        logger.warning("done updating xrefs")      
             
-    def _resolve_jump_destination(self, instruction):
-        if instruction.previous.name.startswith("PUSH"):
-            instruction.jumpto = int(instruction.previous.operand, 16)
-        return instruction.jumpto
+        current = self.first
+        return self._iter()
+    
+    def _update_address_space(self, first):
+        for instruction in self._iter(first):
+            self.instruction_at[instruction.address] = instruction
+            
+    def _update_xrefs(self):
+        # find all JUMP, JUMPI's
+        for loc, instruction in ((l,i) for l,i in self.instruction_at.iteritems() if i.name in ("JUMP","JUMPI")):
+            if instruction.previous and instruction.previous.name.startswith("PUSH"):
+                instruction.jumpto = int(instruction.previous.operand, 16)
+                target_instruction = self.instruction_at.get(instruction.jumpto)
+                if target_instruction and target_instruction.name=="JUMPDEST":
+                    # valid address, valid target
+                    self.xrefs.setdefault(instruction.jumpto,set([]))
+                    self.xrefs[instruction.jumpto] = instruction
+                    target_instruction.xrefs.add(instruction)
     
 
 class EVMDisAssembler(object):
@@ -346,10 +324,14 @@ class EVMDasmPrinter:
         print "-"*150
         # listify it in order to resolve xrefs, jumps
         for i,nm in enumerate(disasm):
+            if nm.name == "JUMPDEST":
+                print ":loc_%s"%hex(nm.address)
             print "[%8d] [0x%0.8x] %-15s %-66s %-30s # %s"%(i, nm.address, nm.name, 
                                                         nm.describe_operand(),
                                                         ','.join('%s@%s'%(x.name,hex(x.address)) for x in nm.xrefs) if nm.xrefs else '',
                                                         nm.description)
+            if nm.name in OPCODE_MARKS_BASICBLOCK_END:
+                print ""
 
 def main():
     logging.basicConfig(format="%(levelname)-7s - %(message)s")
