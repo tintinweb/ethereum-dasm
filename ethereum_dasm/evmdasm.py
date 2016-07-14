@@ -328,7 +328,7 @@ class EVMDisAssembler(object):
             yield instruction.serialize()
 
 def main():
-    logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.basicConfig(format="%(levelname)-7s - %(message)s")
     from optparse import OptionParser
     usage = """usage: %prog [options]
     
@@ -337,7 +337,7 @@ def main():
     """
     parser = OptionParser(usage=usage)
     loglevels = ['CRITICAL', 'FATAL', 'ERROR', 'WARNING', 'WARN', 'INFO', 'DEBUG', 'NOTSET']
-    parser.add_option("-v", "--verbosity", default="notset", 
+    parser.add_option("-v", "--verbosity", default="critical", 
                       help="available loglevels: %s [default: %%default]"%','.join(l.lower() for l in loglevels))
     parser.add_option("-L", "--listing", action="store_true", dest="listing", 
                       help="disables table mode, outputs assembly only")
