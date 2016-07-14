@@ -202,11 +202,14 @@ OPCODES = [ # Stop and Arithmetic Operations
             # Halt Execution, Mark for deletion
             Instruction(opcode=0xff, name='SUICIDE', description="Halt execution and register account for later deletion."), ]
 
+OPCODE_MARKS_BASICBLOCK_END = ['JUMP','JUMPI','STOP','RETURN']
+
 class EVMCode(object):
     def __init__(self, debug=False): 
         self.dis = EVMDisAssembler(debug=debug)
         self.first = None
         self.last = None
+        self.duration = None
     
     def assemble(self, instructions):
         return '0x'+''.join(inst.serialize() for inst in instructions)
@@ -218,10 +221,12 @@ class EVMCode(object):
             yield inst
         '''
         if bytecode:
+            t_start = time.time()
             disasm = list(self.dis.disassemble(bytecode))
             self.first = disasm[0]
             self.last = disasm[-1]
             self._update_xrefs(self.last)
+            self.duration = time.time()-t_start
         elif self.first and self.last:
             # cached
             pass
@@ -327,6 +332,25 @@ class EVMDisAssembler(object):
         for instruction in instructions:
             yield instruction.serialize()
 
+class EVMDasmPrinter:
+    ''' utility class for different output formats
+    '''
+    @staticmethod
+    def listing(disasm):
+        for i,nm in enumerate(disasm):
+            print "%s %s"%(nm.name, nm.operand)
+            
+    @staticmethod
+    def detailed(disasm):
+        print " %-9s  %-10s  %-15s %-66s %-30s %s"%("Instr.#", "addrs.", "mnemonic", "operand", "xrefs", "description")
+        print "-"*150
+        # listify it in order to resolve xrefs, jumps
+        for i,nm in enumerate(disasm):
+            print "[%8d] [0x%0.8x] %-15s %-66s %-30s # %s"%(i, nm.address, nm.name, 
+                                                        nm.describe_operand(),
+                                                        ','.join('%s@%s'%(x.name,hex(x.address)) for x in nm.xrefs) if nm.xrefs else '',
+                                                        nm.description)
+
 def main():
     logging.basicConfig(format="%(levelname)-7s - %(message)s")
     from optparse import OptionParser
@@ -363,22 +387,13 @@ def main():
     evm_dasm = EVMCode(debug=options.verbosity)
     logger.debug(EVMDisAssembler.OPCODE_TABLE)
     
-    t_start = time.time()
     # print dissasembly
     if options.listing:
-        for i,nm in enumerate(evm_dasm.disassemble(evmcode)):
-            print "%s %s"%(nm.name, nm.operand)
+        EVMDasmPrinter.listing(evm_dasm.disassemble(evmcode))
     else:
-        print " %-9s  %-10s  %-15s %-66s %-30s %s"%("Instr.#", "addrs.", "mnemonic", "operand", "xrefs", "description")
-        print "-"*150
-        # listify it in order to resolve xrefs, jumps
-        for i,nm in enumerate(evm_dasm.disassemble(evmcode)):
-            print "[%8d] [0x%0.8x] %-15s %-66s %-30s # %s"%(i, nm.address, nm.name, 
-                                                        nm.describe_operand(),
-                                                        ','.join('%s@%s'%(x.name,hex(x.address)) for x in nm.xrefs) if nm.xrefs else '',
-                                                        nm.description)
-            
-    logger.info("finished in %0.3f seconds."%(time.time()-t_start))
+        EVMDasmPrinter.detailed(evm_dasm.disassemble(evmcode))
+        
+    logger.info("finished in %0.3f seconds."%(evm_dasm.duration))
     # post a notification that disassembly might be incorrect due to errors
     if evm_dasm.dis.errors:
         logger.warning("disassembly finished with %d errors"%len(evm_dasm.errors))  
