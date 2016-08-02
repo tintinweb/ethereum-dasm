@@ -287,7 +287,7 @@ class EVMDisAssembler(object):
             try:
                 instruction = self.OPCODE_TABLE[opcode].consume(iter_bytecode)
             except KeyError,ke:
-                msg = "error: byte at address %d (%s) is not a valid operator"%(pos,hex(opcode))
+                msg = "error: byte at address %d (%s) is not a valid operator"%(pc,hex(opcode))
                 if self.debug:
                     logger.exception(msg)
                 instruction = Instruction(opcode=opcode, 
