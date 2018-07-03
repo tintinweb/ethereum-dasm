@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 # Author : <github.com/tintinweb>
 # from future import print_function
-'''
+"""
 Verbose EthereumVM Disassembler
 
 OPCODES taken from:
     https://github.com/ethereum/go-ethereum/blob/master/core/vm/opcodes.go
     https://github.com/ethereum/yellowpaper/blob/master/Paper.tex
-'''
+"""
+
 import logging
 import sys
 import os
@@ -17,14 +18,17 @@ import time
 
 logger = logging.getLogger(__name__)
 
+
 def is_ascii_subsequence(s, min_percent=0.51):
-    return [ord(c) < 128 and ord(c) > 0x20 for c in s].count(True)/float(len(s)) >= min_percent
+    return [128 > ord(c) > 0x20 for c in s].count(True) / float(len(s)) >= min_percent
+
 
 class Instruction(object):
-    ''' Base Instruction class
+    """ Base Instruction class
 
         doubly linked
-    '''
+    """
+
     def __init__(self, opcode, name, length_of_operand=0, description=None):
         self.opcode, self.name, self.length_of_operand = opcode, name, length_of_operand
         self.operand = ''
@@ -34,33 +38,40 @@ class Instruction(object):
         self.previous = None
         self.xrefs = set([])
         self.jumpto = None
+
     def __repr__(self):
-        return "<%s name=%s address=%s size=%d>"%(self.__class__.__name__, self.name, hex(self.address), self.size())
+        return "<%s name=%s address=%s size=%d>" % (self.__class__.__name__, self.name, hex(self.address), self.size())
+
     def __str__(self):
-        return "%s %s"%(self.name, "0x%s"%self.operand if self.operand else '')
+        return "%s %s" % (self.name, "0x%s" % self.operand if self.operand else '')
+
     def size(self):
-        return 1 + len(self.operand)//2 # opcode + operand
+        return 1 + len(self.operand) // 2  # opcode + operand
+
     def consume(self, bytecode):
         # clone
         m = Instruction(opcode=self.opcode,
-                     name=self.name,
-                     length_of_operand=self.length_of_operand,
-                     description=self.description)
+                        name=self.name,
+                        length_of_operand=self.length_of_operand,
+                        description=self.description)
         # consume
-        m.operand = ''.join('%0.2x'%_ for _ in itertools.islice(bytecode, m.length_of_operand))
+        m.operand = ''.join('%0.2x' % _ for _ in itertools.islice(bytecode, m.length_of_operand))
         return m
+
     def serialize(self):
-        return '%0.2x'%self.opcode + self.operand
+        return '%0.2x' % self.opcode + self.operand
+
     def describe_operand(self):
         if not self.operand:
             str_operand = ''
         else:
             # ascii = ' (%r)'%self.operand.decode("hex") if self.operand and is_ascii_subsequence(self.operand.decode("hex")) else ''
-            ascii=''
-            str_operand = "0x%s%s"%(self.operand,ascii)
+            ascii = ''
+            str_operand = "0x%s%s" % (self.operand, ascii)
 
-        extra = "@%s"%hex(self.jumpto) if self.jumpto else ''
-        return "%s%s"%(str_operand, extra)
+        extra = "@%s" % hex(self.jumpto) if self.jumpto else ''
+        return "%s%s" % (str_operand, extra)
+
 
 OPCODES = [
     # Stop and Arithmetic Operations
@@ -97,21 +108,26 @@ OPCODES = [
     Instruction(opcode=0x30, name='ADDRESS', description="Get address of currently executing account."),
     Instruction(opcode=0x31, name='BALANCE', description="Get balance of the given account."),
     Instruction(opcode=0x32, name='ORIGIN', description="Get execution origination address."),
-    Instruction(opcode=0x33, name='CALLER', description="Get caller address.This is the address of the account that is directly responsible for this execution."),
-    Instruction(opcode=0x34, name='CALLVALUE', description="Get deposited value by the instruction/transaction responsible for this execution."),
+    Instruction(opcode=0x33, name='CALLER',
+                description="Get caller address.This is the address of the account that is directly responsible for this execution."),
+    Instruction(opcode=0x34, name='CALLVALUE',
+                description="Get deposited value by the instruction/transaction responsible for this execution."),
     Instruction(opcode=0x35, name='CALLDATALOAD', description="Get input data of current environment."),
     Instruction(opcode=0x36, name='CALLDATASIZE', description="Get size of input data in current environment."),
-    Instruction(opcode=0x37, name='CALLDATACOPY', description="Copy input data in current environment to memory. This pertains to the input data passed with the message call instruction or transaction."),
+    Instruction(opcode=0x37, name='CALLDATACOPY',
+                description="Copy input data in current environment to memory. This pertains to the input data passed with the message call instruction or transaction."),
     Instruction(opcode=0x38, name='CODESIZE', description="Get size of code running in current environment."),
     Instruction(opcode=0x39, name='CODECOPY', description="Copy code running in current environment to memory."),
     Instruction(opcode=0x3a, name='GASPRICE', description="Get price of gas in current environment."),
     Instruction(opcode=0x3b, name='EXTCODESIZE', description="Get size of an account’s code."),
     Instruction(opcode=0x3c, name='EXTCODECOPY', description="Copy an account’s code to memory."),
-    Instruction(opcode=0x3d, name='RETURNDATASIZE', description="Push the size of the return data buffer onto the stack."),
+    Instruction(opcode=0x3d, name='RETURNDATASIZE',
+                description="Push the size of the return data buffer onto the stack."),
     Instruction(opcode=0x3e, name='RETURNDATACOPY', description="Copy data from the return data buffer."),
 
     # Block Information
-    Instruction(opcode=0x40, name='BLOCKHASH', description="Get the hash of one of the 256 most recent complete blocks."),
+    Instruction(opcode=0x40, name='BLOCKHASH',
+                description="Get the hash of one of the 256 most recent complete blocks."),
     Instruction(opcode=0x41, name='COINBASE', description="Get the block’s beneficiary address."),
     Instruction(opcode=0x42, name='TIMESTAMP', description="Get the block’s timestamp."),
     Instruction(opcode=0x43, name='NUMBER', description="Get the block’s number."),
@@ -129,7 +145,8 @@ OPCODES = [
     Instruction(opcode=0x57, name='JUMPI', description="Conditionally alter the program counter."),
     Instruction(opcode=0x58, name='PC', description="Get the value of the program counter prior to the increment."),
     Instruction(opcode=0x59, name='MSIZE', description="Get the size of active memory in bytes."),
-    Instruction(opcode=0x5a, name='GAS', description="Get the amount of available gas, including the corresponding reduction"),
+    Instruction(opcode=0x5a, name='GAS',
+                description="Get the amount of available gas, including the corresponding reduction"),
     Instruction(opcode=0x5b, name='JUMPDEST', description="Mark a valid destination for jumps."),
 
     # Stack Push Operations
@@ -164,7 +181,8 @@ OPCODES = [
     Instruction(opcode=0x7c, name='PUSH29', length_of_operand=0x1d, description="Place 29-byte item on stack."),
     Instruction(opcode=0x7d, name='PUSH30', length_of_operand=0x1e, description="Place 30-byte item on stack."),
     Instruction(opcode=0x7e, name='PUSH31', length_of_operand=0x1f, description="Place 31-byte item on stack."),
-    Instruction(opcode=0x7f, name='PUSH32', length_of_operand=0x20, description="Place 32-byte (full word) item on stack."),
+    Instruction(opcode=0x7f, name='PUSH32', length_of_operand=0x20,
+                description="Place 32-byte (full word) item on stack."),
 
     # Duplication Operations
     Instruction(opcode=0x80, name='DUP1', description="Duplicate 1st stack item."),
@@ -212,7 +230,8 @@ OPCODES = [
     # System Operations
     Instruction(opcode=0xf0, name='CREATE', description="Create a new account with associated code."),
     Instruction(opcode=0xf1, name='CALL', description="Message-call into an account."),
-    Instruction(opcode=0xf2, name='CALLCODE', description="Message-call into this account with alternative account’s code."),
+    Instruction(opcode=0xf2, name='CALLCODE',
+                description="Message-call into this account with alternative account’s code."),
     Instruction(opcode=0xf3, name='RETURN', description="Halt execution returning output data."),
 
     # Newer opcode
@@ -221,7 +240,8 @@ OPCODES = [
     # Halt Execution, Mark for deletion
     Instruction(opcode=0xff, name='SUICIDE', description="Halt execution and register account for later deletion."), ]
 
-OPCODE_MARKS_BASICBLOCK_END = ['JUMP','JUMPI','STOP','RETURN']
+OPCODE_MARKS_BASICBLOCK_END = ['JUMP', 'JUMPI', 'STOP', 'RETURN']
+
 
 class EVMCode(object):
     def __init__(self, debug=False):
@@ -230,12 +250,12 @@ class EVMCode(object):
         self.last = None
         self.duration = None
 
-        self.instruction_at = {}            # address:instruction
-        self.name_for_address = {}          # address:name
-        self.xrefs = {}                     # address:set(ref istruction,ref instruction)
+        self.instruction_at = {}  # address:instruction
+        self.name_for_address = {}  # address:name
+        self.xrefs = {}  # address:set(ref istruction,ref instruction)
 
     def assemble(self, instructions):
-        return '0x'+''.join(inst.serialize() for inst in instructions)
+        return '0x' + ''.join(inst.serialize() for inst in instructions)
 
     def _iter(self, first=None):
         current = first or self.first
@@ -245,11 +265,11 @@ class EVMCode(object):
             yield current
 
     def disassemble(self, bytecode=None):
-        '''
+        """
         for inst in self.dis.disassemble(bytecode):
             # return them as we process them
             yield inst
-        '''
+        """
         if bytecode:
             t_start = time.time()
             disasm = list(self.dis.disassemble(bytecode))
@@ -257,9 +277,9 @@ class EVMCode(object):
             self.last = disasm[-1]
             self._update_address_space(self.first)
             self._update_xrefs()
-            self.duration = time.time()-t_start
+            self.duration = time.time() - t_start
 
-        current = self.first
+        # current = self.first
         return self._iter()
 
     def _update_address_space(self, first):
@@ -268,13 +288,13 @@ class EVMCode(object):
 
     def _update_xrefs(self):
         # find all JUMP, JUMPI's
-        for loc, instruction in ((l,i) for l,i in self.instruction_at.items() if i.name in ("JUMP","JUMPI")):
+        for loc, instruction in ((l, i) for l, i in self.instruction_at.items() if i.name in ("JUMP", "JUMPI")):
             if instruction.previous and instruction.previous.name.startswith("PUSH"):
                 instruction.jumpto = int(instruction.previous.operand, 16)
                 target_instruction = self.instruction_at.get(instruction.jumpto)
-                if target_instruction and target_instruction.name=="JUMPDEST":
+                if target_instruction and target_instruction.name == "JUMPDEST":
                     # valid address, valid target
-                    self.xrefs.setdefault(instruction.jumpto,set([]))
+                    self.xrefs.setdefault(instruction.jumpto, set([]))
                     self.xrefs[instruction.jumpto] = instruction
                     target_instruction.xrefs.add(instruction)
 
@@ -287,15 +307,16 @@ class EVMDisAssembler(object):
         self.debug = debug
 
     def disassemble(self, bytecode):
-        ''' Disassemble evm bytecode to a Instruction objects '''
+        """ Disassemble evm bytecode to a Instruction objects """
+
         def iterbytes(bytecode):
-            iter_bytecode = (b for b in bytecode if b in '1234567890abcdefABCDEFx') #0x will bail below.
-            for b in zip(iter_bytecode,  iter_bytecode):
+            iter_bytecode = (b for b in bytecode if b in '1234567890abcdefABCDEFx')  # 0x will bail below.
+            for b in zip(iter_bytecode, iter_bytecode):
                 b = ''.join(b)
                 try:
-                    yield int(b,16)
-                except ValueError as ve:
-                    logger.warning("skipping invalid byte: %s"%repr(b))
+                    yield int(b, 16)
+                except ValueError:
+                    logger.warning("skipping invalid byte: %s" % repr(b))
 
         pc = 0
         previous = None
@@ -312,10 +333,10 @@ class EVMDisAssembler(object):
                                           description="Invalid opcode")
 
                 if not seen_stop:
-                    msg = "error: byte at address %d (%s) is not a valid operator"%(pc,hex(opcode))
+                    msg = "error: byte at address %d (%s) is not a valid operator" % (pc, hex(opcode))
                     if self.debug:
                         logger.exception(msg)
-                    self.errors.append("%s; %r"%(msg,ke))
+                    self.errors.append("%s; %r" % (msg, ke))
             if instruction.name == 'STOP' and not seen_stop:
                 seen_stop = True
             instruction.address = pc
@@ -330,37 +351,40 @@ class EVMDisAssembler(object):
             yield instruction
 
     def assemble(self, instructions):
-        ''' Assemble a list of Instruction() objects to evm bytecode'''
+        """ Assemble a list of Instruction() objects to evm bytecode"""
         for instruction in instructions:
             yield instruction.serialize()
 
+
 class EVMDasmPrinter:
-    ''' utility class for different output formats
-    '''
+    """ utility class for different output formats
+    """
+
     @staticmethod
     def listing(disasm):
-        for i,nm in enumerate(disasm):
-            print(("%s %s") % (nm.name, nm.operand))
+        for i, nm in enumerate(disasm):
+            print("%s %s" % (nm.name, nm.operand))
 
     @staticmethod
     def detailed(disasm):
-        print("%-3s %-4s %-3s  %-15s %-36s %-30s %s"%("Inst", "addr", " hex ", "mnemonic", "operand", "xrefs", "description"))
-        print("-"*150)
+        print("%-3s %-4s %-3s  %-15s %-36s %-30s %s" % (
+            "Inst", "addr", " hex ", "mnemonic", "operand", "xrefs", "description"))
+        print("-" * 150)
         # listify it in order to resolve xrefs, jumps
-        for i,nm in enumerate(disasm):
+        for i, nm in enumerate(disasm):
             if nm.name == "JUMPDEST":
-                print(":loc_%s"%hex(nm.address))
+                print(":loc_%s" % hex(nm.address))
             try:
-                operand = ','.join('%s@%s'%(x.name,hex(x.address)) for x in nm.xrefs) if nm.xrefs else ''
-                print("%4d [%3d 0x%0.3x] %-15s %-36s %-30s # %s"%(i, nm.address, nm.address, nm.name,
-                                                                nm.describe_operand(),
-                                                                operand,
-                                                                nm.description))
-            except Exception as e :
-                from trepan.api import debug; debug()
+                operand = ','.join('%s@%s' % (x.name, hex(x.address)) for x in nm.xrefs) if nm.xrefs else ''
+                print("%4d [%3d 0x%0.3x] %-15s %-36s %-30s # %s" % (i, nm.address, nm.address, nm.name,
+                                                                    nm.describe_operand(),
+                                                                    operand,
+                                                                    nm.description))
+            except Exception as e:
                 print(e)
             if nm.name in OPCODE_MARKS_BASICBLOCK_END:
                 print("")
+
 
 def main():
     logging.basicConfig(format="%(levelname)-7s - %(message)s")
@@ -373,14 +397,14 @@ def main():
     parser = OptionParser(usage=usage)
     loglevels = ['CRITICAL', 'FATAL', 'ERROR', 'WARNING', 'WARN', 'INFO', 'DEBUG', 'NOTSET']
     parser.add_option("-v", "--verbosity", default="critical",
-                      help="available loglevels: %s [default: %%default]"%','.join(l.lower() for l in loglevels))
+                      help="available loglevels: %s [default: %%default]" % ','.join(l.lower() for l in loglevels))
     parser.add_option("-L", "--listing", action="store_true", dest="listing",
                       help="disables table mode, outputs assembly only")
     # parse args
     (options, args) = parser.parse_args()
 
     if options.verbosity.upper() in loglevels:
-        options.verbosity = getattr(logging,options.verbosity.upper())
+        options.verbosity = getattr(logging, options.verbosity.upper())
         logger.setLevel(options.verbosity)
     else:
         parser.error("invalid verbosity selected. please check --help")
@@ -390,7 +414,7 @@ def main():
         evmcode = sys.stdin.read()
     else:
         if os.path.isfile(args[0]):
-            evmcode = open(args[0],'r').read()
+            evmcode = open(args[0], 'r').read()
         else:
             evmcode = args[0]
 
@@ -404,21 +428,21 @@ def main():
     else:
         EVMDasmPrinter.detailed(evm_dasm.disassemble(evmcode))
 
-    logger.info("finished in %0.3f seconds."%(evm_dasm.duration))
+    logger.info("finished in %0.3f seconds." % evm_dasm.duration)
     # post a notification that disassembly might be incorrect due to errors
-    errs = evm_dasm.dis.errors
-    if errs:
-        logger.warning("disassembly finished with %d errors" % len(errs))
+    if evm_dasm.dis.errors:
+        logger.warning("disassembly finished with %d errors" % len(evm_dasm.dis.errors))
         if options.verbosity >= 30:
             logger.warning("use -v INFO to see the errors")
         else:
-            for e in errs:
+            for e in evm_dasm.dis.errors:
                 logger.info(e)
 
-
     # quick check
-    print("assemble(disassemble(evmcode))==",evmcode.strip() == ''.join(evm_dasm.assemble(evm_dasm.disassemble())))
+    logger.debug("assemble(disassemble(evmcode))==",
+                 evmcode.strip() == ''.join(evm_dasm.assemble(evm_dasm.disassemble())))
     sys.exit(len(evm_dasm.dis.errors))
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()

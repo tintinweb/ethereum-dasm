@@ -1,1 +1,1 @@
-import evmdasm
+from . import evmdasm
