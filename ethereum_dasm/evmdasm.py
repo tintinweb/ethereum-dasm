@@ -442,6 +442,9 @@ def main():
     else:
         parser.error("invalid verbosity selected. please check --help")
 
+    if options.function_signature_lookup and not ethereum_input_decoder:
+        logger.warning("ethereum_input_decoder package not installed. function signature lookup not available.(pip install ethereum-input-decoder)")
+
     # get bytecode from stdin, or arg:file or arg:bytcode
     if not args:
         evmcode = sys.stdin.read()
