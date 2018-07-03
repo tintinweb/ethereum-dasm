@@ -15,12 +15,31 @@ import sys
 import os
 import itertools
 import time
+import json
+
+try:
+    import ethereum_input_decoder
+except ImportError:
+    ethereum_input_decoder = None
 
 logger = logging.getLogger(__name__)
 
 
 def is_ascii_subsequence(s, min_percent=0.51):
     return [128 > ord(c) > 0x20 for c in s].count(True) / float(len(s)) >= min_percent
+
+
+cache_lookup_function_signature = {}# memcache for now.
+
+
+def lookup_function_signature(sighash):
+    if not ethereum_input_decoder:
+        return []
+    cache_hit = cache_lookup_function_signature.get(sighash)
+    if cache_hit:
+        return cache_hit
+    cache_lookup_function_signature[sighash] = list(ethereum_input_decoder.decoder.FourByteDirectory.lookup_signatures(sighash))
+    return cache_lookup_function_signature[sighash]
 
 
 class Instruction(object):
@@ -61,9 +80,21 @@ class Instruction(object):
     def serialize(self):
         return '%0.2x' % self.opcode + self.operand
 
-    def describe_operand(self):
+    def describe_operand(self, resolve_funcsig=False):
         if not self.operand:
             str_operand = ''
+        elif resolve_funcsig and len(self.operand)==8:
+            # 4bytes, could be a func-sig
+            pot_funcsigs = lookup_function_signature(self.operand)
+            if len(pot_funcsigs)==0:
+                ascii = ''
+            elif len(pot_funcsigs)==1:
+                ascii = '  (\'function %s\')' % pot_funcsigs[0]
+            else:
+                ascii = '  (*ambiguous* \'function %s\')' % pot_funcsigs[0]
+
+
+            str_operand = "0x%s%s" % (self.operand, ascii)
         else:
             # ascii = ' (%r)'%self.operand.decode("hex") if self.operand and is_ascii_subsequence(self.operand.decode("hex")) else ''
             ascii = ''
@@ -366,7 +397,7 @@ class EVMDasmPrinter:
             print("%s %s" % (nm.name, nm.operand))
 
     @staticmethod
-    def detailed(disasm):
+    def detailed(disasm, resolve_funcsig=False):
         print("%-3s %-4s %-3s  %-15s %-36s %-30s %s" % (
             "Inst", "addr", " hex ", "mnemonic", "operand", "xrefs", "description"))
         print("-" * 150)
@@ -377,7 +408,7 @@ class EVMDasmPrinter:
             try:
                 operand = ','.join('%s@%s' % (x.name, hex(x.address)) for x in nm.xrefs) if nm.xrefs else ''
                 print("%4d [%3d 0x%0.3x] %-15s %-36s %-30s # %s" % (i, nm.address, nm.address, nm.name,
-                                                                    nm.describe_operand(),
+                                                                    nm.describe_operand(resolve_funcsig=resolve_funcsig),
                                                                     operand,
                                                                     nm.description))
             except Exception as e:
@@ -391,8 +422,8 @@ def main():
     from optparse import OptionParser
     usage = """usage: %prog [options]
 
-       example: %prog [-L -v] <file_or_bytecode>
-                %prog [-L -v] # read from stdin
+       example: %prog [-L -F -v] <file_or_bytecode>
+                %prog [-L -F -v] # read from stdin
     """
     parser = OptionParser(usage=usage)
     loglevels = ['CRITICAL', 'FATAL', 'ERROR', 'WARNING', 'WARN', 'INFO', 'DEBUG', 'NOTSET']
@@ -400,6 +431,8 @@ def main():
                       help="available loglevels: %s [default: %%default]" % ','.join(l.lower() for l in loglevels))
     parser.add_option("-L", "--listing", action="store_true", dest="listing",
                       help="disables table mode, outputs assembly only")
+    parser.add_option("-f", "--lookup-function-signature", action="store_true", dest="function_signature_lookup",
+                      help="enable online function signature lookup")
     # parse args
     (options, args) = parser.parse_args()
 
@@ -426,7 +459,7 @@ def main():
     if options.listing:
         EVMDasmPrinter.listing(evm_dasm.disassemble(evmcode))
     else:
-        EVMDasmPrinter.detailed(evm_dasm.disassemble(evmcode))
+        EVMDasmPrinter.detailed(evm_dasm.disassemble(evmcode), resolve_funcsig=options.function_signature_lookup)
 
     logger.info("finished in %0.3f seconds." % evm_dasm.duration)
     # post a notification that disassembly might be incorrect due to errors
