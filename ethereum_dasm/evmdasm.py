@@ -22,14 +22,26 @@ try:
 except ImportError:
     ethereum_input_decoder = None
 
+
 logger = logging.getLogger(__name__)
 
 
+def hex_decode(s):
+    try:
+        return bytes.fromhex(s).decode('ascii')
+    except (NameError, AttributeError):
+        return s.decode("hex")
+    except (UnicodeDecodeError):
+        return ''  #invalid
+
+
 def is_ascii_subsequence(s, min_percent=0.51):
+    if len(s) == 0:
+        return False
     return [128 > ord(c) > 0x20 for c in s].count(True) / float(len(s)) >= min_percent
 
 
-cache_lookup_function_signature = {}# memcache for now.
+cache_lookup_function_signature = {}  # memcache for lookkup_function_signature
 
 
 def lookup_function_signature(sighash):
@@ -83,20 +95,22 @@ class Instruction(object):
     def describe_operand(self, resolve_funcsig=False):
         if not self.operand:
             str_operand = ''
-        elif resolve_funcsig and len(self.operand)==8:
+        elif resolve_funcsig and len(self.operand) == 8:
             # 4bytes, could be a func-sig
             pot_funcsigs = lookup_function_signature(self.operand)
-            if len(pot_funcsigs)==0:
+            if len(pot_funcsigs) == 0:
                 ascii = ''
-            elif len(pot_funcsigs)==1:
+            elif len(pot_funcsigs) == 1:
                 ascii = '  (\'function %s\')' % pot_funcsigs[0]
             else:
                 ascii = '  (*ambiguous* \'function %s\')' % pot_funcsigs[0]
 
-
+            str_operand = "0x%s%s" % (self.operand, ascii)
+        elif len(self.operand) > 8:
+            ascii = ' (%r)' % hex_decode(self.operand) \
+                if self.operand and is_ascii_subsequence(hex_decode(self.operand)) else ''
             str_operand = "0x%s%s" % (self.operand, ascii)
         else:
-            # ascii = ' (%r)'%self.operand.decode("hex") if self.operand and is_ascii_subsequence(self.operand.decode("hex")) else ''
             ascii = ''
             str_operand = "0x%s%s" % (self.operand, ascii)
 
@@ -441,6 +455,9 @@ def main():
         logger.setLevel(options.verbosity)
     else:
         parser.error("invalid verbosity selected. please check --help")
+
+    if options.function_signature_lookup and not ethereum_input_decoder:
+        logger.warning("ethereum_input_decoder package not installed. function signature lookup not available.(pip install ethereum-input-decoder)")
 
     # get bytecode from stdin, or arg:file or arg:bytcode
     if not args:
