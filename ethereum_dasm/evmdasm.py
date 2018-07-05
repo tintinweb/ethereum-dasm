@@ -72,7 +72,6 @@ class EthJsonRpc(object):
         }
         headers = {'Content-Type': 'application/json'}
         resp = self.session.post(self.url, headers=headers, json=data)
-        print(resp.status_code)
 
         self.id += 1
         return resp.json()

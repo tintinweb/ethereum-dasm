@@ -21,6 +21,7 @@ Usage: evmdasm.py [options]
 
        example: evmdasm.py [-L -F -v] <file_or_bytecode>
                 evmdasm.py [-L -F -v] # read from stdin
+                evmdasm.py [-L -F -a <address>] # fetch contract code from infura.io
 
 
 Options:
@@ -30,13 +31,16 @@ Options:
                         critical,fatal,error,warning,warn,info,debug,notset
                         [default: critical]
   -L, --listing         disables table mode, outputs assembly only
-  -f, --lookup-function-signature
-                        enable online function signature lookup
+  -F, --no-online-lookup
+                        disable online function signature lookup
+  -a ADDRESS, --address=ADDRESS
+                        fetch contract bytecode from address
 
 ```
-    #> echo "0x12345678" | python evmdasm.py -v critical
+    #> echo "0x12345678" | python evmdasm.py
     #> python evmdasm.py -v critical "0x12345678"
     #> python evmdasm.py -v critical ether_contract.evm
+    #> python evmdasm.py -a <contract address>
 
 
 ## examples
