@@ -15,7 +15,7 @@ import sys
 import os
 import itertools
 import time
-import json
+import requests
 
 try:
     import ethereum_input_decoder
@@ -52,6 +52,30 @@ def lookup_function_signature(sighash):
         return cache_hit
     cache_lookup_function_signature[sighash] = list(ethereum_input_decoder.decoder.FourByteDirectory.lookup_signatures(sighash))
     return cache_lookup_function_signature[sighash]
+
+
+class EthJsonRpc(object):
+
+    def __init__(self, url):
+        self.url = url
+        self.id = 1
+        self.session = requests.session()
+
+    def call(self, method, params=None):
+
+        params = params or []
+        data = {
+            'jsonrpc': '2.0',
+            'method': method,
+            'params': params,
+            'id': self.id,
+        }
+        headers = {'Content-Type': 'application/json'}
+        resp = self.session.post(self.url, headers=headers, json=data)
+        print(resp.status_code)
+
+        self.id += 1
+        return resp.json()
 
 
 class Instruction(object):
@@ -438,6 +462,7 @@ def main():
 
        example: %prog [-L -F -v] <file_or_bytecode>
                 %prog [-L -F -v] # read from stdin
+                %prog [-L -F -a <address>] # fetch contract code from infura.io
     """
     parser = OptionParser(usage=usage)
     loglevels = ['CRITICAL', 'FATAL', 'ERROR', 'WARNING', 'WARN', 'INFO', 'DEBUG', 'NOTSET']
@@ -445,8 +470,11 @@ def main():
                       help="available loglevels: %s [default: %%default]" % ','.join(l.lower() for l in loglevels))
     parser.add_option("-L", "--listing", action="store_true", dest="listing",
                       help="disables table mode, outputs assembly only")
-    parser.add_option("-f", "--lookup-function-signature", action="store_true", dest="function_signature_lookup",
-                      help="enable online function signature lookup")
+    parser.add_option("-F", "--no-online-lookup", action="store_false", default=True, dest="function_signature_lookup",
+                      help="disable online function signature lookup")
+    parser.add_option("-a", "--address",
+                      help="fetch contract bytecode from address")
+
     # parse args
     (options, args) = parser.parse_args()
 
@@ -460,7 +488,10 @@ def main():
         logger.warning("ethereum_input_decoder package not installed. function signature lookup not available.(pip install ethereum-input-decoder)")
 
     # get bytecode from stdin, or arg:file or arg:bytcode
-    if not args:
+    if options.address:
+        api = EthJsonRpc("https://mainnet.infura.io/")
+        evmcode = api.call(method="eth_getCode", params=[options.address, "latest"])["result"]
+    elif not args:
         evmcode = sys.stdin.read()
     else:
         if os.path.isfile(args[0]):
