@@ -5,6 +5,11 @@ ethereum evm bytecode disassembler
 
 **disassembles evm bytecode**
 
+## install
+
+```#> python -m pip install ethereum-dasm
+#>python -m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf```
+
 ## usage
 
 * provide the path to the ethereum vm bytecode or the bytecode as an argument to evmdasm. Tries to read from stdin by default.
