@@ -1,9 +1,11 @@
 # ethereum-dasm 
-ethereum evm bytecode disassembler
+ethereum evm bytecode disassembler with function signature lookup
 
 [https://github.com/ethereum/] [https://www.ethereum.org/]
 
 **disassembles evm bytecode**
+
+[![asciicast](https://asciinema.org/a/fbWad5tV9YmpCGB97wbI1al9w.png)](https://asciinema.org/a/fbWad5tV9YmpCGB97wbI1al9w)
 
 ## install
 
