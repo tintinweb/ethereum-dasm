@@ -16,7 +16,7 @@ setup(
     description=(
         "An ethereum vm (evm) bytecode disassembler"),
     license="GPLv2",
-    keywords=["ethereum", "blockchain", "disassembler"],
+    keywords=["ethereum", "blockchain", "evm", "disassembler"],
     url="https://github.com/tintinweb/ethereum-dasm",
     download_url="https://github.com/tintinweb/ethereum-dasm/tarball/v0.1",
     #python setup.py register -r https://testpypi.python.org/pypi
