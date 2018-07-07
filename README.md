@@ -7,8 +7,10 @@ ethereum evm bytecode disassembler
 
 ## install
 
-```#> python -m pip install ethereum-dasm
-#>python -m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf```
+```
+#> python -m pip install ethereum-dasm
+#> python -m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf
+```
 
 ## usage
 
