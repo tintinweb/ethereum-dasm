@@ -77,6 +77,17 @@ class EthJsonRpc(object):
         return resp.json()
 
 
+class BasicBlock(object):
+
+    def __init__(self, address=None, name=None, instructions=None):
+        self.instructions = instructions or []
+        self.address = address
+        self.name = name
+
+    def __repr__(self):
+        return "<BasicBlock 0x%x instructions:%d>" % (self.address, len(self.instructions))
+
+
 class Instruction(object):
     """ Base Instruction class
 
@@ -92,6 +103,7 @@ class Instruction(object):
         self.previous = None
         self.xrefs = set([])
         self.jumpto = None
+        self.basicblock = None
 
     def __repr__(self):
         return "<%s name=%s address=%s size=%d>" % (self.__class__.__name__, self.name, hex(self.address), self.size())
@@ -118,7 +130,8 @@ class Instruction(object):
     def describe_operand(self, resolve_funcsig=False):
         if not self.operand:
             str_operand = ''
-        elif resolve_funcsig and len(self.operand) == 8:
+        elif resolve_funcsig and len(self.operand) == 8 and self.address < 0x100:
+            # speed improvment: its very unlikely that there will be funcsigs after addr 400
             # 4bytes, could be a func-sig
             pot_funcsigs = lookup_function_signature(self.operand)
             if len(pot_funcsigs) == 0:
@@ -366,6 +379,22 @@ class EVMCode(object):
                     self.xrefs[instruction.jumpto] = instruction
                     target_instruction.xrefs.add(instruction)
 
+    def basicblocks(self, disasm):
+        # listify it in order to resolve xrefs, jumps
+        current_basicblock = BasicBlock(address=0, name="init")
+
+        for i, nm in enumerate(disasm):
+            if nm.name == "JUMPDEST":
+                # jumpdest belongs tto the new basicblock (marks the start)
+                yield current_basicblock
+                current_basicblock = BasicBlock(address=nm.address, name="loc_%s"% hex(nm.address))
+
+            # add to current basicblock
+            current_basicblock.instructions.append(nm)
+            nm.basicblock = current_basicblock
+        # yield the last basicblock
+        yield current_basicblock
+
 
 class EVMDisAssembler(object):
     OPCODE_TABLE = dict((obj.opcode, obj) for obj in OPCODES)
@@ -453,6 +482,30 @@ class EVMDasmPrinter:
             if nm.name in OPCODE_MARKS_BASICBLOCK_END:
                 print("")
 
+    @staticmethod
+    def basicblocks_detailed(basicblocks, resolve_funcsig=False):
+        print("%-3s %-4s %-3s  %-15s %-36s %-30s %s" % (
+            "Inst", "addr", " hex ", "mnemonic", "operand", "xrefs", "description"))
+        print("-" * 150)
+
+        i = 0
+        for bb in basicblocks:
+            # every basicblock
+            print(":loc_%s" % hex(bb.address))
+            for nm in bb.instructions:
+                try:
+                    operand = ','.join('%s@%s' % (x.name, hex(x.address)) for x in nm.xrefs) if nm.xrefs else ''
+                    print("%4d [%3d 0x%0.3x] %-15s %-36s %-30s # %s" % (i, nm.address, nm.address, nm.name,
+                                                                        nm.describe_operand(
+                                                                            resolve_funcsig=resolve_funcsig),
+                                                                        operand,
+                                                                        nm.description))
+                except Exception as e:
+                    print(e)
+                i += 1
+            if nm.name in OPCODE_MARKS_BASICBLOCK_END:
+                print("")
+
 
 def main():
     logging.basicConfig(format="%(levelname)-7s - %(message)s")
@@ -506,7 +559,8 @@ def main():
     if options.listing:
         EVMDasmPrinter.listing(evm_dasm.disassemble(evmcode))
     else:
-        EVMDasmPrinter.detailed(evm_dasm.disassemble(evmcode), resolve_funcsig=options.function_signature_lookup)
+        EVMDasmPrinter.basicblocks_detailed(evm_dasm.basicblocks(evm_dasm.disassemble(evmcode)), resolve_funcsig=options.function_signature_lookup)
+        #EVMDasmPrinter.detailed(evm_dasm.disassemble(evmcode), resolve_funcsig=options.function_signature_lookup)
 
     logger.info("finished in %0.3f seconds." % evm_dasm.duration)
     # post a notification that disassembly might be incorrect due to errors
