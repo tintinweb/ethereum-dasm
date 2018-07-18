@@ -54,7 +54,7 @@ class Contract(object):
     Main Input Class
     """
 
-    def __init__(self, bytecode=None, address=None):
+    def __init__(self, bytecode=None, address=None, static_analysis=True, dynamic_analysis=True):
         if not bytecode and not address:
             raise Exception("missing bytecode or contract address")
 
@@ -64,12 +64,13 @@ class Contract(object):
 
         self.bytecode = bytecode
         self.address = address
-        self._evmcode = EvmCode(contract=self)  # do not reference this directly, always use self.disassembly()
+        self._evmcode = EvmCode(contract=self,
+                                static_analysis=static_analysis, dynamic_analysis=dynamic_analysis)  # do not reference this directly, always use self.disassembly()
 
     @property
     def disassembly(self):
         if not self._evmcode.instructions:
-            self._evmcode.disassemble(bytecode=self.bytecode, analyze=True)
+            self._evmcode.disassemble(bytecode=self.bytecode)
         return self._evmcode
 
     @property
@@ -166,10 +167,12 @@ class EvmCode(object):
 
     designed like wdasm/idapro with instructions and annotations/tables with extra info per address
     """
-    def __init__(self, contract, debug=False):
+    def __init__(self, contract, debug=False, static_analysis=True, dynamic_analysis=True):
         # args
         self.contract = contract
         self.debug = debug
+        self.enable_static_analysis = static_analysis
+        self.enable_dynamic_analysis = dynamic_analysis
 
         # init
         self.disassembler = EVMDisAssembler(debug=debug)
@@ -205,7 +208,7 @@ class EvmCode(object):
     def assemble(self, instructions):
         return '0x' + ''.join(inst.serialize() for inst in instructions)
 
-    def disassemble(self, bytecode=None, analyze=True):
+    def disassemble(self, bytecode=None):
         """
         Disassemble bytecode to [Instructions,]
         :param bytecode: evm bytecode
@@ -238,9 +241,8 @@ class EvmCode(object):
         self.strings_at = dict((instr.address, instr) for instr in self.instructions if instr.operand_bytes and len(instr.operand_bytes)>=2 and utils.is_all_ascii(instr.operand_bytes))
 
         # ---> run analysis <---
-        if analyze:
-            self.analyze_static()
-            self.analyze_dynamic()  # dynamic would be sufficient
+        self.analyze_static()
+        self.analyze_dynamic()  # dynamic would be sufficient
 
 
         # timekeeping
@@ -294,6 +296,8 @@ class EvmCode(object):
         yield current_basicblock
 
     def analyze_static(self):
+        if not self.enable_static_analysis:
+            return
         self._static_update_xrefs()  # update statically known XREFs
         self._reconstruct_function_signatures()  # find function signatures
 
@@ -427,7 +431,7 @@ class EvmCode(object):
                 self.instruction_at[loc].annotations.append("potential signatures: %r" % f["signatures_ascii"])
 
     def analyze_dynamic(self):
-        if not symbolic_execute:
+        if not symbolic_execute or not self.enable_dynamic_analysis:
             return
 
         # run the symbolic execution
@@ -612,6 +616,10 @@ def main():
                       help="disable color mode (requires pip install colorama)")
     parser.add_option("-A", "--guess-abi", dest="guess_abi", default=False, action="store_true",
                       help="guess the ABI for that contract")
+    parser.add_option("-D", "--no-dynamic-analysis", dest="dynamic_analysis", default=True, action="store_false",
+                      help="disable dynamic analysis / symolic execution")
+    parser.add_option("-S", "--no-static-analysis", dest="static_analysis", default=True, action="store_false",
+                      help="disable static analysis")
 
     # parse args
     (options, args) = parser.parse_args()
@@ -625,20 +633,27 @@ def main():
     if options.no_color:
         utils.colors.colorama = None  # override the import to disable colorama
 
+    if not options.dynamic_analysis:
+        symbolic_execute = None  # hack hack
+
     if options.function_signature_lookup and not utils.signatures.ethereum_input_decoder:
         logger.warning("ethereum_input_decoder package not installed. function signature lookup not available.(pip install ethereum-input-decoder)")
 
     # get bytecode from stdin, or arg:file or arg:bytcode
 
     if options.address:
-        contract = Contract(address=options.address)
+        contract = Contract(address=options.address,
+                            static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
     elif not args:
-        contract = Contract(bytecode=sys.stdin.read())
+        contract = Contract(bytecode=sys.stdin.read(),
+                            static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
     else:
         if os.path.isfile(args[0]):
-            contract = Contract(bytecode=open(args[0], 'r').read())
+            contract = Contract(bytecode=open(args[0], 'r').read(),
+                                static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
         else:
-            contract = Contract(bytecode=args[0])
+            contract = Contract(bytecode=args[0],
+                                static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
 
     #logger.debug(INSTRUCTIONS_BY_OPCODE)
 
