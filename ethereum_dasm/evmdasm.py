@@ -30,8 +30,10 @@ logger = logging.getLogger(__name__)
 
 try:
     from ethereum_dasm.symbolic.mythril import symbolic_execute
+    import z3
 except ImportError as ie:
     symbolic_execute = None
+    z3 = None
     logger.warning("Symbolic Execution not available: %s" % ie)
 
 try:
@@ -99,16 +101,20 @@ class Contract(object):
         account = etherchain.account(self.address)
 
         # try to get abi from etherchain
-        abi = account.api.get_account_abi(account.address)
-        if abi:
-            return abi
+        try:
+            abi = account.api.get_account_abi(account.address)
+            if abi:
+                return abi
+        except Exception as e:
+            # todo - JSONDecodeError or pyetherchainerror
+            logger.warning("guess_abi: %r"%e)
 
         # guess abi from transactions
         # get all transaction inputs
         tx_inputs = set([])
         for t in account.transactions(
                 start=0, length=txs, direction="in")["data"]:
-            tx = pyetherchain.pyetherchain.EtherChainTransaction(tx=t["parenthash"])
+            tx = pyetherchain.EtherChainTransaction(tx=t["parenthash"])
             if tx[0]["input"].strip():
                 tx_inputs.add(tx[0]["input"])
 
@@ -120,7 +126,9 @@ class Contract(object):
         for tx_input in tx_inputs:
             pseudo_abi = FourByteDirectory.get_pseudo_abi_for_input(utils.str_to_bytes(tx_input))
             lst_pa = list(pseudo_abi)
-            online_sighash_to_pseudo_abi[lst_pa[0]["signature"]] = lst_pa
+            # todo: hacky
+            if lst_pa:
+                online_sighash_to_pseudo_abi[lst_pa[0]["signature"]] = lst_pa
 
         # combine evm info with input decoder info
         abi_out = []
@@ -453,7 +461,7 @@ class EvmCode(object):
         for addr, instr in self.jumptable.items():  # all JUMP/I s
             # get symbolic stack
             for node, state in self.symbolic_state_at.get(addr,[]):  # todo investigate keyerror
-                dst = state.mstate.stack[-1].as_long()
+                dst = z3.simplify(state.mstate.stack[-1]).as_long()
                 if instr.jumpto and instr.jumpto != dst:  # todo: needs to be a set
                     logger.warning("Symbolic JUMP destination different: %s != %s" % (instr.jumpto, dst))
                 instr.jumpto = dst
