@@ -1,0 +1,6 @@
+requests
+colorama
+tabulate
+mythril
+ethereum-input-decoder
+pyetherchain
