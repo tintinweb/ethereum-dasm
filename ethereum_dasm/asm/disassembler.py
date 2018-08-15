@@ -47,10 +47,17 @@ class EVMDisAssembler(object):
             logger.debug(opcode)
             try:
                 instruction = INSTRUCTIONS_BY_OPCODE[opcode].consume(iter_bytecode)
+                if not len(instruction.operand_bytes)==instruction.length_of_operand:
+                    logger.error("invalid instruction: %s" % instruction.name)
+                    instruction.name = "INVALID_%s" % hex(opcode)
+                    instruction.description = "Invalid operand"
+                    instruction.category = "unknown"
+
             except KeyError as ke:
                 instruction = Instruction(opcode=opcode,
                                           name="UNKNOWN_%s" % hex(opcode),
-                                          description="Invalid opcode")
+                                          description="Invalid opcode",
+                                          category="unknown")
 
                 if not seen_stop:
                     msg = "error: byte at address %d (%s) is not a valid operator" % (pc, hex(opcode))
@@ -59,6 +66,7 @@ class EVMDisAssembler(object):
                     self.errors.append("%s; %r" % (msg, ke))
             if instruction.name == 'STOP' and not seen_stop:
                 seen_stop = True
+
 
             instruction.address = pc
             pc += instruction.size()
@@ -69,6 +77,8 @@ class EVMDisAssembler(object):
 
             # current is previous
             previous = instruction
+
+            #print("%s: %s %s" % (hex(instruction.address), instruction.name, instruction.operand))
             yield instruction
 
     def assemble(self, instructions):
