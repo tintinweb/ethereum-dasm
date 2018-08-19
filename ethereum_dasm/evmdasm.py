@@ -13,13 +13,19 @@ import logging
 import sys
 import os
 import time
-import ethereum_dasm.utils as utils
+from ethereum_dasm import utils
 from ethereum_dasm.asm import BasicBlock
 from ethereum_dasm.asm.registry import INSTRUCTION_MARKS_BASICBLOCK_END
-from ethereum_dasm.utils import colors
 from ethereum_dasm.asm.disassembler import EVMDisAssembler
 import ethereum_input_decoder
 from ethereum_input_decoder.decoder import FourByteDirectory
+
+try:
+    import ethereum_dasm.symbolic.simplify as evmsimplify
+    from ethereum_dasm.symbolic.simplify import get_z3_value
+    supports_z3 = True
+except ImportError as ie:
+    supports_z3 = False
 
 import textwrap
 import tabulate
@@ -76,6 +82,10 @@ class Contract(object):
         return self._evmcode
 
     @property
+    def simplified(self):
+        return evmsimplify(self.disassembly)
+
+    @property
     def methods(self):
         return self.disassembly.functions
 
@@ -96,6 +106,7 @@ class Contract(object):
 
         if not self.address:
             raise Exception("address required.")
+
 
         etherchain = pyetherchain.EtherChain()
         account = etherchain.account(self.address)
@@ -200,7 +211,9 @@ class EvmCode(object):
         self.xrefs_at = {}  # address:set(ref istruction,ref instruction) - address to instruction for JUMP xrefs
 
         self.functions = {}  # sighash: {"address","signature_ascii", "signatures", "payable", "inputs", "constant"}
+        self.function_at = {}  # address (JUMPDEST): sighash
 
+        self.name_for_location = {}  # address: function_name
         self.name_at = {}  # address:name # todo - to be implemented: replace the "operand" overwrite in instruction() with a global table for this
         self.comments_at = {}  # address:[comment,] todo implement in favor of instruction.annotation/basicblock.annotation
         self.annotations_at = {}  # address:[annot,] todo implement in favor of instruction.annotation/basicblock.annotation
@@ -213,7 +226,8 @@ class EvmCode(object):
 
         self.duration = None
 
-    def assemble(self, instructions):
+    def assemble(self, instructions=None):
+        instructions = instructions or self.instructions
         return '0x' + ''.join(inst.serialize() for inst in instructions)
 
     def disassemble(self, bytecode=None):
@@ -279,6 +293,21 @@ class EvmCode(object):
                 yield current
             current = current.next
 
+    def find_within_address_range(self, start=0, end=65535):
+        current = start or self.first
+        while current:
+            if start <= current.address < end:
+                yield current
+            current = current.next
+
+    def insert(self, instruction, index):
+        self.instructions.insert(index, instruction)
+        # fix jumptable in current code. adding length of current jump
+        self.reload()
+
+    def reload(self):
+        self.disassemble(bytecode=self.assemble())  # reanalyze
+
     @staticmethod
     def _get_basicblocks(disasm):
         # listify it in order to resolve xrefs, jumps
@@ -335,9 +364,11 @@ class EvmCode(object):
         #   check next block for CALLDATALOAD to get number of args and length
 
         # get first instruction
+        # check first 3 blocks:
         instr_calldataload = self.basicblock_at[0].skip_to(["CALLDATALOAD"])
 
-        if instr_calldataload.name != "CALLDATALOAD":
+        if not instr_calldataload or instr_calldataload.name != "CALLDATALOAD":
+            return # todo remove
             raise Exception("missing CALLDATALOAD")
 
         loc_to_sighash = {}
@@ -438,6 +469,14 @@ class EvmCode(object):
             if f["signatures_ascii"]:
                 self.instruction_at[loc].annotations.append("potential signatures: %r" % f["signatures_ascii"])
 
+            self.function_at[loc] = f
+            if f["signatures"]:
+                self.name_for_location[loc] = "/*OR*/".join(_["name"] for _ in f["signatures"]) # in case multiple sigs returned
+            else:
+                # alt. use sighash as a label for location
+                self.name_for_location[loc] = "0x%s" % sighash
+
+
     def analyze_dynamic(self):
         if not symbolic_execute or not self.enable_dynamic_analysis:
             return
@@ -450,9 +489,14 @@ class EvmCode(object):
         # assign every address a block and states
         for node, state in symgraph.iterate_blocks_and_states():
             instr = state.get_current_instruction()
-            self.symbolic_state_at.setdefault(instr['address'], set([]))
-            self.symbolic_state_at[instr['address']].add((node, state))
+            self.symbolic_state_at.setdefault(instr['address'], [])
+            self.symbolic_state_at[instr['address']].append((node, state))
 
+
+        #print(set(self.symbolic_state_at.keys()).symmetric_difference(set(self.instruction_at.keys())))
+        #print(self.symbolic_state_at.keys())
+        #print(self.instruction_at.keys())
+        #input("--")
         # -----------------------------
         #  analysis: jumps
         # -----------------------------
@@ -477,7 +521,7 @@ class EvmCode(object):
         for instr in self.find("CALLDATALOAD"):
             # get symbolic stack
             for node, state in self.symbolic_state_at.get(instr.address, []):
-                cdl_offset = state.mstate.stack[-1].as_long()  # get last item from stack (=offset)
+                cdl_offset = get_z3_value(state.mstate.stack[-1])  # get last item from stack (=offset)
                 # calldata offset
                 calldataloads.setdefault(node,[])
                 calldataloads[node].append((instr, cdl_offset))
@@ -628,6 +672,8 @@ def main():
                       help="disable dynamic analysis / symolic execution")
     parser.add_option("-S", "--no-static-analysis", dest="static_analysis", default=True, action="store_false",
                       help="disable static analysis")
+    parser.add_option("-s", "--simplify", dest="simplify", default=False, action="store_true",
+                      help="simplify disassembly to human readable code")
 
     # parse args
     (options, args) = parser.parse_args()
@@ -691,6 +737,12 @@ def main():
         print(contract.guess_abi())
 
     # ------ testing area
+
+    if options.simplify:
+        print("======================[simplified]")
+        print("")
+        for x in contract.simplified:
+            print(x)
 
     # ------ testing area
 

@@ -177,6 +177,7 @@ class MythrilSymExecGraph(DiGraph):
         :param start:
         :return:
         """
+        start = start or self.get_block_by_uid(0)
         return self.find_all_paths(start_vertex=start, end_vertex=None)
 
     def get_stream_by_block(self, block, start=None):
@@ -205,7 +206,7 @@ class MythrilSymExecGraph(DiGraph):
 
 def symbolic_execute(code, address):
     contract = ETHContract(code)
-    sym = SymExecWrapper(contract=contract, address=address)
+    sym = SymExecWrapper(contract=contract, address=address, strategy="dfs")
 
     # populate graph object
     graph = MythrilSymExecGraph()
