@@ -39,5 +39,5 @@ def str_to_bytes(s):
         return s.decode("hex")
 
 
-def bytes_to_str(s):
-    return "0x%s" % binascii.hexlify(s).decode("utf-8")
+def bytes_to_str(s, prefix="0x"):
+    return "%s%s" % (prefix,binascii.hexlify(s).decode("utf-8"))
