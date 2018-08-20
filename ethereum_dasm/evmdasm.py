@@ -14,11 +14,10 @@ import sys
 import os
 import time
 from ethereum_dasm import utils
+from ethereum_dasm.utils import colors
 from ethereum_dasm.asm import BasicBlock
 from ethereum_dasm.asm.registry import INSTRUCTION_MARKS_BASICBLOCK_END
 from ethereum_dasm.asm.disassembler import EVMDisAssembler
-import ethereum_input_decoder
-from ethereum_input_decoder.decoder import FourByteDirectory
 
 try:
     import ethereum_dasm.symbolic.simplify as evmsimplify
@@ -135,7 +134,7 @@ class Contract(object):
         online_sighash_to_pseudo_abi = {}
 
         for tx_input in tx_inputs:
-            pseudo_abi = FourByteDirectory.get_pseudo_abi_for_input(utils.str_to_bytes(tx_input))
+            pseudo_abi = utils.signatures.ethereum_input_decoder.decoder.FourByteDirectory.get_pseudo_abi_for_input(utils.str_to_bytes(tx_input))
             lst_pa = list(pseudo_abi)
             # todo: hacky
             if lst_pa:
@@ -409,7 +408,7 @@ class EvmCode(object):
             self.functions[sighash] = {"address":loc,
                                        "signature_ascii": ascii,
                                        "signatures_ascii": pot_funcsigs,
-                                       "signatures": [ethereum_input_decoder.decoder.FourByteDirectory.parse_text_signature(s) for s in pot_funcsigs],
+                                       "signatures": [utils.signatures.ethereum_input_decoder.decoder.FourByteDirectory.parse_text_signature(s) for s in pot_funcsigs],
                                        "payable": True,#functions are payable by default
                                        "constant": None, # no write storage (replaced by view/pure)  todo
                                        "view": None, #no write storage  todo
