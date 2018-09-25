@@ -54,6 +54,8 @@ INSTRUCTIONS = [
     Instruction(opcode=0x3c, name='EXTCODECOPY', category="envinfo", gas=20, description="Copy an account's code to memory.", args=["address", "memOffset", "codeOffset", "length"]),
     Instruction(opcode=0x3d, name='RETURNDATASIZE', category="envinfo", gas=2, description="Push the size of the return data buffer onto the stack.", returns=["returndatasize"]),
     Instruction(opcode=0x3e, name='RETURNDATACOPY', category="envinfo", gas=3, description="Copy data from the return data buffer.", args=["memOffset", "dataOffset", "length"]),
+    Instruction(opcode=0x3f, name='EXTCODEHASH', category="envinfo", gas=400, description="<TBD> - Constantinople", args=["slot"]),
+
 
     # Block Information
     Instruction(opcode=0x40, name='BLOCKHASH', category="blockinfo", gas=20, description="Get the hash of one of the 256 most recent complete blocks.", args=["num"], returns=["block.blockhash"]),
@@ -166,6 +168,7 @@ INSTRUCTIONS = [
     Instruction(opcode=0xf2, name='CALLCODE', category="system", gas=40, description="Message-call into this account with alternative account's code.", args=["gas", "address", "value", "inOffset", "inSize", "retOffset", "retSize"]),
     Instruction(opcode=0xf3, name='RETURN', category="terminate", gas=0, description="Halt execution returning output data.", args=["offset", "size"]),
     Instruction(opcode=0xf4, name='DELEGATECALL', category="system", gas=40, description="<TBD - fixme todo>", args=["gas", "address", "inOffset", "inSize", "retOffset", "retSize"]),
+    Instruction(opcode=0xf5, name='CREATE2', category="system", gas=32000, description="<TBD> - Constantinople", args=["endowment", "offset", "size", "salt"]),
 
     # Newer opcode
     Instruction(opcode=0xfa, name='STATICCALL', category="system", gas=40, description='<TBD - fixme todo>', args=["gas", "address", "inOffset", "inSize", "retOffset", "retSize"]),
