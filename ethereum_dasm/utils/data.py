@@ -17,6 +17,9 @@ def is_ascii_subsequence(s, min_percent=0.51):
     if len(s) == 0:
         return False
     if isinstance(s, bytes):
+        s = s.rstrip(b'\x00')  # ignore zero padding
+        if not len(s):
+            return False
         return [128 > c > 0x20 for c in s].count(True) / float(len(s)) >= min_percent
     return [128 > ord(c) > 0x20 for c in s].count(True) / float(len(s)) >= min_percent
 

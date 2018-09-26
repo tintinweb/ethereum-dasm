@@ -140,8 +140,11 @@ class Instruction(object):
 
             str_operand = "0x%s%s" % (self.operand, ascii)
         elif len(self.operand_bytes) >= 4:
-            ascii = ' (%r)' % utils.hex_decode(self.operand_bytes) \
-                if self.operand_bytes and utils.is_ascii_subsequence(self.operand_bytes) else ''
+            try:
+                ascii = ' (%r)' % self.operand_bytes.decode("utf-8") \
+                    if self.operand_bytes and utils.is_ascii_subsequence(self.operand_bytes) else ''
+            except UnicodeDecodeError:
+                ascii = ''
             str_operand = "0x%s%s" % (self.operand, ascii)
         else:
             ascii = ''
