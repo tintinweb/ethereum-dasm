@@ -69,8 +69,8 @@ class Contract(object):
             api = utils.EthJsonRpc("https://mainnet.infura.io/")
             bytecode = api.call(method="eth_getCode", params=[address, "latest"])["result"]
 
-        self.bytecode = bytecode
         self.address = address
+        self.bytecode, self.auxdata = Contract.get_auxdata(bytecode)
         self._evmcode = EvmCode(contract=self,
                                 static_analysis=static_analysis, dynamic_analysis=dynamic_analysis)  # do not reference this directly, always use self.disassembly()
 
@@ -178,6 +178,25 @@ class Contract(object):
             abi_out.append(abi_method)
         return abi_out
 
+    @staticmethod
+    def get_auxdata(bytecode):
+        # auxdata format: 0xa1 0x65 'b' 'z' 'z' 'r' '0' 0x58 0x20 <32 bytes swarm hash> 0x00 0x29
+        signature_hexstr = 'a165%x%x%x%x%x5820'%(ord('b'),ord('z'),ord('z'),ord('r'),ord('0'))
+        auxdata_index = bytecode.rfind(signature_hexstr)
+        if auxdata_index < 0:
+            return bytecode, {}
+        # verify consistency
+        auxdata={}
+        auxdata['raw'] = bytecode[auxdata_index:]
+        auxdata['swarm'] = auxdata['raw'][len(signature_hexstr):len(signature_hexstr)+32*2]
+
+        if not auxdata['raw'][len(signature_hexstr)+32*2:len(signature_hexstr)+(32+2)*2]=="0029":
+            logger.error("invalid auxdata format!")
+            return bytecode, {}
+
+        # cut auxdata from bytecode
+        bytecode = bytecode[:auxdata_index]
+        return bytecode, auxdata
 
 class EvmCode(object):
     """
@@ -729,6 +748,8 @@ def main():
         else:
             for e in contract.disassembly.disassembler.errors:
                 logger.info(e)
+
+    logger.info("AUXDATA: %r"%contract.auxdata)
 
     if options.guess_abi:
         print("=" * 30)
