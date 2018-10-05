@@ -70,7 +70,7 @@ INSTRUCTIONS = [
     # dummy is only there to indicate that there is a pop()
     Instruction(opcode=0x51, name='MLOAD', category="memory", gas=3, description="Load word from memory.", args=["offset"]),
     Instruction(opcode=0x52, name='MSTORE', category="memory", gas=3, description="Save word to memory.", args=["offset","value"]),
-    Instruction(opcode=0x53, name='MSTORE8', category="memory", gas=3, length_of_operand=0x8, description="Save byte to memory.", args=["offset","value"]),
+    Instruction(opcode=0x53, name='MSTORE8', category="memory", gas=3, description="Save byte to memory.", args=["offset","value"]),
     Instruction(opcode=0x54, name='SLOAD', category="storage", gas=50, description="Load word from storage.", args=["loc"], returns=["result"]),
     Instruction(opcode=0x55, name='SSTORE', category="storage", gas=0, description="Save word to storage.", args=["loc", "value"]),
     Instruction(opcode=0x56, name='JUMP', category="controlflow", gas=8, description="Alter the program counter.", args=["evm.pc"]),
@@ -151,11 +151,11 @@ INSTRUCTIONS = [
     Instruction(opcode=0x9f, name='SWAP16', category="stack", gas=3, description="Exchange 1st and 17th stack items."),
 
     # Logging Operations
-    Instruction(opcode=0xa0, name='LOG0', category="event", gas=375, length_of_operand=0x0, description="Append log record with no topics.", args=["start", "size"]),
-    Instruction(opcode=0xa1, name='LOG1', category="event", gas=750, length_of_operand=0x1, description="Append log record with one topic.", args=["start", "size", "topic1"]),
-    Instruction(opcode=0xa2, name='LOG2', category="event", gas=1125, length_of_operand=0x2, description="Append log record with two topics.", args=["start", "size", "topic1", "topic2"]),
-    Instruction(opcode=0xa3, name='LOG3', category="event", gas=1500, length_of_operand=0x3, description="Append log record with three topics.", args=["start", "size", "topic1", "topic2", "topic3"]),
-    Instruction(opcode=0xa4, name='LOG4', category="event", gas=1875, length_of_operand=0x4, description="Append log record with four topics.", args=["start", "size", "topic1", "topic2", "topic3", "topic4"]),
+    Instruction(opcode=0xa0, name='LOG0', category="event", gas=375,  description="Append log record with no topics.", args=["start", "size"]),
+    Instruction(opcode=0xa1, name='LOG1', category="event", gas=750,  description="Append log record with one topic.", args=["start", "size", "topic1"]),
+    Instruction(opcode=0xa2, name='LOG2', category="event", gas=1125,  description="Append log record with two topics.", args=["start", "size", "topic1", "topic2"]),
+    Instruction(opcode=0xa3, name='LOG3', category="event", gas=1500,  description="Append log record with three topics.", args=["start", "size", "topic1", "topic2", "topic3"]),
+    Instruction(opcode=0xa4, name='LOG4', category="event", gas=1875, description="Append log record with four topics.", args=["start", "size", "topic1", "topic2", "topic3", "topic4"]),
 
     # unofficial opcodes used for parsing.
     Instruction(opcode=0xb0, name='UNOFFICIAL_PUSH', category="unofficial", description="unofficial opcodes used for parsing."),
