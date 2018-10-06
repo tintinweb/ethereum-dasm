@@ -79,7 +79,7 @@ class Contract(object):
 
     @property
     def simplified(self):
-        return evmsimplify(self.disassembly)
+        return evmsimplify.simplify(self.disassembly)
 
     @property
     def methods(self):
@@ -389,18 +389,18 @@ class EvmCode(object):
 
         loc_to_sighash = {}
 
-        while instr_calldataload.name in ["CALLDATALOAD", "PUSH4", "EQ", "PUSH1", "PUSH2", "JUMPI"]:
+        while instr_calldataload.name in ["CALLDATALOAD", "PUSH4", "EQ", "PUSH1", "PUSH2", "PUSH3", "JUMPI"]:
             # abort on jumpdest
             ipushfuncsig = instr_calldataload.skip_to(
-                ["CALLDATALOAD", "PUSH4", "EQ", "PUSH1", "PUSH2", "JUMPI", "JUMPDEST"])
+                ["CALLDATALOAD", "PUSH4", "EQ", "PUSH1", "PUSH2", "PUSH3", "JUMPI", "JUMPDEST"])
             ieq = ipushfuncsig.skip_to(
-                ["CALLDATALOAD", "PUSH4", "EQ", "PUSH1", "PUSH2", "JUMPI", "JUMPDEST"])
+                ["CALLDATALOAD", "PUSH4", "EQ", "PUSH1", "PUSH2", "PUSH3", "JUMPI", "JUMPDEST"])
             ipushaddr = ieq.skip_to(
-                ["CALLDATALOAD", "PUSH4", "EQ", "PUSH1", "PUSH2", "JUMPI", "JUMPDEST"])
+                ["CALLDATALOAD", "PUSH4", "EQ", "PUSH1", "PUSH2", "PUSH3", "JUMPI", "JUMPDEST"])
             ijumpi = ipushaddr.skip_to(
-                ["CALLDATALOAD", "PUSH4", "EQ", "PUSH1", "PUSH2", "JUMPI", "JUMPDEST"])
+                ["CALLDATALOAD", "PUSH4", "EQ", "PUSH1", "PUSH2", "PUSH3", "JUMPI", "JUMPDEST"])
 
-            if ipushfuncsig.name != "PUSH4" or ieq.name != "EQ" or not ipushaddr.name.startswith(
+            if not ipushfuncsig.name.startswith("PUSH") or ieq.name != "EQ" or not ipushaddr.name.startswith(
                     "PUSH") or ijumpi.name != "JUMPI":
                 break
 
