@@ -58,12 +58,12 @@ class Contract(object):
     Main Input Class
     """
 
-    def __init__(self, bytecode=None, address=None, static_analysis=True, dynamic_analysis=True):
+    def __init__(self, bytecode=None, address=None, static_analysis=True, dynamic_analysis=True, network="mainnet"):
         if not bytecode and not address:
             raise Exception("missing bytecode or contract address")
 
         if not bytecode:
-            api = utils.EthJsonRpc("https://mainnet.infura.io/")
+            api = utils.EthJsonRpc("https://%s.infura.io/"%network)
             bytecode = api.call(method="eth_getCode", params=[address, "latest"])["result"]
 
         self.address = address
@@ -579,6 +579,8 @@ def main():
                       help="disable static analysis")
     parser.add_option("-s", "--simplify", dest="simplify", default=False, action="store_true",
                       help="simplify disassembly to human readable code")
+    parser.add_option("-n", "--network", dest="network", default="mainnet",
+                      help="network for address lookup (default: mainnet, ropsten, rinkeby, kovan")
 
     # parse args
     (options, args) = parser.parse_args()
@@ -602,16 +604,20 @@ def main():
 
     if options.address:
         contract = Contract(address=options.address,
+                            network=options.network,
                             static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
     elif not args:
         contract = Contract(bytecode=sys.stdin.read().strip(),
+                            network=options.network,
                             static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
     else:
         if os.path.isfile(args[0]):
             contract = Contract(bytecode=open(args[0], 'r').read(),
+                                network=options.network,
                                 static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
         else:
             contract = Contract(bytecode=args[0],
+                                network=options.network,
                                 static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
 
     #logger.debug(INSTRUCTIONS_BY_OPCODE)
