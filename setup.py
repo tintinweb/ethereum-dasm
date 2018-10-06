@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-version="0.1.3"
+version="0.1.4"
 
 setup(
     name="ethereum-dasm",
@@ -23,8 +23,9 @@ setup(
     download_url="https://github.com/tintinweb/ethereum-dasm/tarball/v%s"%version,
     #python setup.py register -r https://testpypi.python.org/pypi
     long_description=read("README.md") if os.path.isfile("README.md") else "",
-    long_description_type='text/markdown',
-    install_requires=["colorama",
+    long_description_content_type='text/markdown',
+    install_requires=["evmdasm",
+                      "colorama",
                       "requests",
                       "tabulate"],
     #package_data={},

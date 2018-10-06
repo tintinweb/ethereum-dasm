@@ -10,9 +10,9 @@ OPCODES taken from:
 """
 
 import logging
-import itertools
 import random
 import ethereum_dasm.utils as utils
+import evmdasm.instructions
 
 logger = logging.getLogger(__name__)
 
@@ -58,70 +58,29 @@ class BasicBlock(object):
         return False
 
 
-class Instruction(object):
-    """ Base Instruction class
+class Instruction(evmdasm.instructions.Instruction):
 
-        doubly linked
-    """
+    def __init__(self, opcode, name, length_of_operand=0, description=None, args=None, returns=None, gas=-1,
+                 category=None):
+        super().__init__(opcode=opcode, name=name,
+                         length_of_operand=length_of_operand,
+                         description=description,
+                         args=args, returns=returns,
+                         gas=gas, category=category)
 
-    def __init__(self, opcode, name, length_of_operand=0, description=None, args=None, returns=None, gas=-1, category=None):
-        # static
-        self.opcode, self.name, self.length_of_operand = opcode, name, length_of_operand
-        self.gas = gas
-        self.description = description
-        self.args = args or []  # number of arguments the instruction takes from stack
-        self.returns = returns or []  # number of results returned (0 or 1)
-        self.category = category  # instruction category
-
-        # dynamic
-        self.opcode_bytes = (self.opcode).to_bytes(1, byteorder="big")
-        self.operand_bytes = b'\x00'*length_of_operand  # sane default
-        self.operand = '\x00'*length_of_operand  # sane default
+        # additional attribs
         self.annotations = []
-        self.address = None
-        self.next = None
-        self.previous = None
         self.xrefs = set([])
         self.jumpto = None
         self.basicblock = None
 
-    def clone(self):
-        return Instruction(opcode=self.opcode,
-                           name=self.name,
-                           length_of_operand=self.length_of_operand,
-                           description=self.description,
-                           args=self.args, returns=self.returns,
-                           gas=self.gas,
-                           category=self.category)
-
-    def __repr__(self):
-        return "<%s name=%s address=%s size=%d %s>" % (self.__class__.__name__, self.name, hex(self.address), self.size(), "operand=%r" % self.operand if self.operand else "")
-
-    def __str__(self):
-        return "%s %s" % (self.name, "0x%s" % self.operand if self.operand else '')
-
-    def size(self):
-        return self.length_of_operand +1  # opcode + operand
-
-    def consume(self, bytecode):
-        # clone
-        m = self.clone()
-        # consume
-        m.set_operand(bytes(_ for _ in itertools.islice(bytecode, m.length_of_operand)))
-        return m
-
-    def set_operand(self, b):
-        self.operand_bytes = b
-        self.operand = ''.join('%0.2x' % _ for _ in self.operand_bytes)
-        return self
+    @staticmethod
+    def from_evmdasm_instruction(evmdasm_instruction):
+        return Instruction()
 
     def randomize_operand(self):
-        self.set_operand(bytes(bytearray(random.getrandbits(8) for _ in range(self.length_of_operand))))
+        self.operand_bytes = bytes(bytearray(random.getrandbits(8) for _ in range(self.length_of_operand)))
         return self
-
-    def serialize(self):
-        return ("%0.2x"%self.opcode)+utils.bytes_to_str(self.operand_bytes, prefix="")
-        #return '%0.2x' % self.opcode + self.operand
 
     def describe_operand(self, resolve_funcsig=False):
         if not self.operand:
@@ -152,11 +111,3 @@ class Instruction(object):
 
         extra = "@%s" % hex(self.jumpto) if self.jumpto else ''
         return "%s%s" % (str_operand, extra)
-
-    def skip_to(self, names):
-        res = self.next
-        while res:
-            if any(res.name==name for name in names):
-                return res
-            res = res.next
-        return None

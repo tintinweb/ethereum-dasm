@@ -13,22 +13,25 @@ import logging
 import sys
 import os
 import time
+from evmdasm.disassembler import EvmDisassembler
+
 from ethereum_dasm import utils
 from ethereum_dasm.utils import colors
 from ethereum_dasm.asm import BasicBlock
-from ethereum_dasm.asm.registry import INSTRUCTION_MARKS_BASICBLOCK_END
-from ethereum_dasm.asm.disassembler import EVMDisAssembler
+import ethereum_dasm.asm.registry as registry
+from ethereum_dasm.output import console
+
+
 
 try:
     import ethereum_dasm.symbolic.simplify as evmsimplify
     from ethereum_dasm.symbolic.simplify import get_z3_value
     supports_z3 = True
 except ImportError as ie:
+    get_z3_value = lambda x: str(x)
     supports_z3 = False
 
-import textwrap
-import tabulate
-tabulate.PRESERVE_WHITESPACE = True
+
 
 
 logger = logging.getLogger(__name__)
@@ -48,12 +51,6 @@ except ImportError as ie:
     logger.warning("pyetherchain not available: %s" % ie)
 
 
-def format_comment_block(it, indent=0):
-    s = [indent * " " + "/*******************************************************************"]
-    for i in it:
-        s.append((2+indent)*" "+ "%s" % i)
-    s.append(indent*" "+ "*******************************************************************/")
-    return "\n".join(s)
 
 
 class Contract(object):
@@ -198,6 +195,7 @@ class Contract(object):
         bytecode = bytecode[:auxdata_index]
         return bytecode, auxdata
 
+
 class EvmCode(object):
     """
     Main Disassembler Class
@@ -212,7 +210,7 @@ class EvmCode(object):
         self.enable_dynamic_analysis = dynamic_analysis
 
         # init
-        self.disassembler = EVMDisAssembler(debug=debug)
+        self.disassembler = EvmDisassembler(debug=debug, _registry=registry.registry)
 
         self.first = None  # first instruction
         self.last = None  # last instruction
@@ -552,117 +550,6 @@ class EvmCode(object):
         # todo implement the rest
 
 
-class EVMDasmPrinter:
-    """ utility class for different output formats
-    """
-
-    @staticmethod
-    def listing(disasm, json=False):
-        for i, nm in enumerate(disasm):
-            if json:
-                print(json.dumps({"name":nm.name, "operand":nm.operand}))
-            else:
-                print("%s %s" % (nm.name, nm.operand))
-
-    @staticmethod
-    def detailed(evmcode, resolve_funcsig=False):
-        print("%-3s %-4s %-3s  %-15s %-36s %-30s %s" % (
-            "Inst", "addr", " hex ", "mnemonic", "operand", "xrefs", "description"))
-        print("-" * 150)
-        # listify it in order to resolve xrefs, jumps
-        for i, nm in enumerate(evmcode.instructions):
-            if nm.name == "JUMPDEST":
-                print(":loc_%s %s" % (hex(nm.address), "(%s)"%'  -->   '.join(nm.annotations)))
-            try:
-                operand = ','.join('%s@%s' % (x.name, hex(x.address)) for x in nm.xrefs) if nm.xrefs else ''
-                print("%4d [%3d 0x%0.3x] %-15s %-36s %-30s # %s %s" % (i, nm.address, nm.address, nm.name,
-                                                                    nm.describe_operand(resolve_funcsig=resolve_funcsig), # todo: get rid of this and use evmcode.name_at(nm.address)
-                                                                    operand,
-                                                                    nm.description,
-                                                                    "returns: %r" % nm.returns if nm.returns else ""))
-            except Exception as e:
-                print(e)
-            if nm.name in INSTRUCTION_MARKS_BASICBLOCK_END:
-                print("")
-
-    @staticmethod
-    def basicblocks_detailed(evmcode, resolve_funcsig=False):
-
-        # todo - remove annotations from objects and track them in evmcode
-        print("%-4s   %-4s %-5s  %-3s | %-15s %-36s %-30s %s" % (
-            "Inst", "addr", " hex ", "gas", "mnemonic", "operand", "xrefs", "description"))
-        print("-" * 150)
-
-        i = 0
-        for bb in evmcode.basicblocks:
-            # every basicblock
-            print("%s %s" % (utils.colors.Color.location(":loc_%s" % hex(bb.address)),
-                             "\n"+format_comment_block(bb.instructions[0].annotations, indent=2)+"\n" if bb.instructions[0].annotations else ""))
-            for nm in bb.instructions:
-                try:
-                    operand = ','.join('%s@%s' % (x.name, hex(x.address)) for x in nm.xrefs) if nm.xrefs else ''
-                    print("%4d [%-4s %-4s] %-3s | %-15s %-36s %-30s # %-60s %-30s %s" % (i,
-                                                                                         utils.colors.Color.address(nm.address, fmt="%4d"),
-                                                                                         utils.colors.Color.address(nm.address, fmt="0x%0.4x"),
-                                                                                         utils.colors.Color.gas(nm.gas), utils.colors.Color.instruction(nm.name),
-                                                                                         nm.describe_operand(
-                                                                            resolve_funcsig=resolve_funcsig),  # todo: get rid of this and use evmcode.name_at(nm.address)
-                                                                                         operand,
-                                                                                         nm.description,
-                                                                                         "returns: %s" % ', '.join(nm.returns) if nm.returns else "",
-                                                                                         "args: %s" % ', '.join(nm.args) if nm.args else ""))
-
-                except Exception as e:
-                    print(e)
-
-                i += 1
-            if nm.name in INSTRUCTION_MARKS_BASICBLOCK_END:
-                print("")
-
-    @staticmethod
-    def basicblocks_detailed_tabulate(evmcode, resolve_funcsig=False):
-        headers = ["  %-4s   %-4s %-5s   %-3s | %-15s %-36s" % ("Inst", "addr", " hex ", "gas", "mnemonic", "operand"),
-                   "xrefs", "description", "retval", "args"]
-
-        lines = []
-        # todo - remove annotations from objects and track them in evmcode
-
-        i = 0
-        for bb in evmcode.basicblocks:
-            # every basicblock
-
-            lines.append(["%s %s" % (utils.colors.Color.location(":loc_%s" % hex(bb.address)),
-                             "\n" + format_comment_block(bb.instructions[0].annotations, indent=2) + "\n" if
-                             bb.instructions[0].annotations else "")])
-
-            for nm in bb.instructions:
-                try:
-                    operand = ','.join('%s@%s' % (x.name, utils.colors.Color.location(hex(x.address))) for x in nm.xrefs) if nm.xrefs else ''
-
-                    lines.append(["  %4d [%-4s %-4s ] %-3s | %-15s %-36s" % (i,
-                                                                          utils.colors.Color.address(nm.address, fmt="%4d"),
-                                                                          utils.colors.Color.address(nm.address, fmt="0x%0.4x"),
-                                                                          utils.colors.Color.gas(nm.gas),
-                                                                          utils.colors.Color.instruction(nm.name),
-                                                                          nm.describe_operand(resolve_funcsig=resolve_funcsig),),
-
-                                 # todo: get rid of this and use evmcode.name_at(nm.address)
-                                 operand,
-                                 '\n  '.join(textwrap.wrap("%s %s" % (utils.colors.Color.description("#"), nm.description))),
-                                 '\n'.join(textwrap.wrap(', '.join(nm.returns) if nm.returns else "", width=20)),
-                                 '\n'.join(textwrap.wrap(', '.join(nm.args) if nm.args else "", width=20))])
-
-                except Exception as e:
-                    print(e)
-
-                i += 1
-            if nm.name in INSTRUCTION_MARKS_BASICBLOCK_END:
-                lines.append([" "])
-        print(tabulate.tabulate(lines, headers=headers, numalign="right"))
-
-
-
-
 def main():
     logging.basicConfig(format="%(levelname)-7s - %(message)s", level=logging.WARNING)
     from optparse import OptionParser
@@ -717,7 +604,7 @@ def main():
         contract = Contract(address=options.address,
                             static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
     elif not args:
-        contract = Contract(bytecode=sys.stdin.read(),
+        contract = Contract(bytecode=sys.stdin.read().strip(),
                             static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
     else:
         if os.path.isfile(args[0]):
@@ -731,10 +618,10 @@ def main():
 
     # print dissasembly
     if options.listing:
-        EVMDasmPrinter.listing(contract.disassembly)
+        console.EVMDasmPrinter.listing(contract.disassembly)
     else:
         #evm_dasm.disassemble(contract.bytecode)
-        EVMDasmPrinter.basicblocks_detailed_tabulate(contract.disassembly,
+        console.EVMDasmPrinter.basicblocks_detailed_tabulate(contract.disassembly,
                                                      resolve_funcsig=options.function_signature_lookup)
         #print(evm_dasm.functions)  ## print detected functions
         #EVMDasmPrinter.detailed(evm_dasm.disassemble(evmcode), resolve_funcsig=options.function_signature_lookup)

@@ -1,3 +1,4 @@
+evmdasm
 requests
 colorama
 tabulate
