@@ -79,8 +79,8 @@ class EVMDasmPrinter:
                                                                             resolve_funcsig=resolve_funcsig),  # todo: get rid of this and use evmcode.name_at(nm.address)
                                                                                          operand,
                                                                                          nm.description,
-                                                                                         "returns: %s" % ', '.join(nm.returns) if nm.returns else "",
-                                                                                         "args: %s" % ', '.join(nm.args) if nm.args else ""))
+                                                                                         "returns: %s" % ', '.join(map(str,nm.returns)) if nm.returns else "",
+                                                                                         "args: %s" % ', '.join(map(str,nm.args)) if nm.args else ""))
 
                 except Exception as e:
                     print(e)
@@ -119,8 +119,8 @@ class EVMDasmPrinter:
                                  # todo: get rid of this and use evmcode.name_at(nm.address)
                                  operand,
                                  '\n  '.join(textwrap.wrap("%s %s" % (utils.colors.Color.description("#"), nm.description))),
-                                 '\n'.join(textwrap.wrap(', '.join(nm.returns) if nm.returns else "", width=20)),
-                                 '\n'.join(textwrap.wrap(', '.join(nm.args) if nm.args else "", width=20))])
+                                 '\n'.join(textwrap.wrap(', '.join(map(str,nm.returns)) if nm.returns else "", width=20)),
+                                 '\n'.join(textwrap.wrap(', '.join(map(str,nm.args)) if nm.args else "", width=20))])
 
                 except Exception as e:
                     print(e)

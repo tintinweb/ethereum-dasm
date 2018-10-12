@@ -195,6 +195,15 @@ class Contract(object):
         bytecode = bytecode[:auxdata_index]
         return bytecode, auxdata
 
+    def trace_transaction(self, tx):
+        api = utils.EthJsonRpc("https://%s.infura.io/" % "mainnet")
+        bytecode = api.call(method="debug_traceTransaction", params=[tx, {"disableStorage": False,
+                                                                          "disableMemory": False,
+                                                                          "disableStack": False,
+                                                                          "tracer": None,
+                                                                          "timeout": None}])
+
+
 
 class EvmCode(object):
     """
