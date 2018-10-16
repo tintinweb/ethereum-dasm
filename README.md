@@ -51,11 +51,11 @@ Options:
                         disable static analysis
 ```
 
-    #> echo "0x12345678" | python3evmdasm.py
-    #> python3evmdasm.py 0x12345678
-    #> python3evmdasm.py ether_contract.evm
-    #> python3evmdasm.py -a <contract address>
-    #> python3-m ethereum_dasm -a <contract address>  -A
+    #> echo "0x12345678" | python3 evmdasm.py
+    #> python3 evmdasm.py 0x12345678
+    #> python3 evmdasm.py ether_contract.evm
+    #> python3 evmdasm.py -a <contract address>
+    #> python3 -m ethereum_dasm -a <contract address>  -A
 
 ## features
 
@@ -78,7 +78,7 @@ Options:
 ## examples
 
 **abi online lookup or reconstruction**
-```#>python3-m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf  -A```
+```#>python3 -m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf  -A```
 ```python
 # [....]
 [{'stateMutability': 'nonpayable', 'constant': False, 'type': 'function', 'name': 'enter', 'signature': '0x124c32a1', 'outputs': [{'type': 'bool', 'name': ''}], 'inputs': [{'type': 'bytes32', 'name': '_passcode'
@@ -89,7 +89,7 @@ able': False}, {'inputs': [], 'stateMutability': 'nonpayable', 'payable': False,
 ```
 
 **abi reconstruction from dasm if abi is not available**
-`#> python3-m ethereum_dasm -a 0x8f8bed23a644f3bbb4e227e28704c050e67c35be -A`
+`#> python3 -m ethereum_dasm -a 0x8f8bed23a644f3bbb4e227e28704c050e67c35be -A`
 ```
 [{'signature': '0x95d89b41', 'outputs': [], 'stateMutability': None, 'name': 'symbol', 'constant': None, 'inputs': [], 'payable': True, 'type': 'function', 'address': 598}, {'signature': '0x095ea7b3', 'outputs':
  [], 'stateMutability': None, 'name': 'approve', 'constant': None, 'inputs': ['bytes32', '<bytes??>'], 'payable': True, 'type': 'function', 'address': 328}, {'signature': '0x313ce567', 'outputs': [], 'stateMutab
@@ -107,7 +107,7 @@ puts': [], 'stateMutability': None, 'name': 'transfer', 'constant': None, 'input
 
 **detailed listing**
 
-```python3-m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf  -A --no-color ```
+```python3 -m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf  -A --no-color ```
 ```python
   Inst   addr  hex    gas | mnemonic        operand                                               xrefs        description                                                           retval           args
 ------------------------------------------------------------------------------------------------  -----------  --------------------------------------------------------------------  ---------------  --------------------
