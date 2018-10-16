@@ -27,8 +27,8 @@ class EVMDasmPrinter:
     """
 
     @staticmethod
-    def listing(disasm, json=False):
-        for i, nm in enumerate(disasm):
+    def listing(evmcode, json=False):
+        for i, nm in enumerate(evmcode.instructions):
             if json:
                 print(json.dumps({"name":nm.name, "operand":nm.operand}))
             else:
