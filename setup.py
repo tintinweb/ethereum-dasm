@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-version="0.1.4"
+version="0.1.5"
 
 setup(
     name="ethereum-dasm",
@@ -18,7 +18,7 @@ setup(
     description=(
         "An ethereum bytecode disassembler with static and dynamic analysis features"),
     license="GPLv2",
-    keywords=["ethereum", "blockchain", "evm", "disassembler"],
+    keywords=["ethereum", "blockchain", "evm", "disassembler", "decompiler", "pseudocode"],
     url="https://github.com/tintinweb/ethereum-dasm",
     download_url="https://github.com/tintinweb/ethereum-dasm/tarball/v%s"%version,
     #python setup.py register -r https://testpypi.python.org/pypi

@@ -7,7 +7,12 @@ ethereum evm bytecode disassembler with static- and dynamic-analysis and functio
 
 **disassembles evm bytecode**
 
-[![asciicast](https://asciinema.org/a/fbWad5tV9YmpCGB97wbI1al9w.png)](https://asciinema.org/a/fbWad5tV9YmpCGB97wbI1al9w)
+[![asciicast](https://asciinema.org/a/256036.png)](https://asciinema.org/a/256036)
+
+**decompile a contract to pseudocode**
+
+[![asciicast](https://asciinema.org/a/0xJvR55Zr7svqibS0oLHA2vY5.png)](https://asciinema.org/a/0xJvR55Zr7svqibS0oLHA2vY5)
+
 
 ## install
 
@@ -18,19 +23,18 @@ ethereum evm bytecode disassembler with static- and dynamic-analysis and functio
 ```
 
 ```
-#> python3 -m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf  # verify installation
+#> python3 -m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf  # jusst to verify installation
 ```
 
 ## usage
 
 ```
-#> evmdasm.py --help
-Usage: evmdasm.py [options]
+Usage: ethereum_dasm.py [options]
 
-       example: evmdasm.py [-L -F -v] <file_or_bytecode>
-                evmdasm.py [-L -F -v] # read from stdin
-                evmdasm.py [-L -F -a <address>] # fetch contract code from infura.io
-
+       example: ethereum_dasm.py [-L -F -v] <file_or_bytecode>
+                ethereum_dasm.py [-L -F -v] # read from stdin
+                ethereum_dasm.py [-L -F -a <address>] # fetch contract code from infura.io
+    
 
 Options:
   -h, --help            show this help message and exit
@@ -49,16 +53,29 @@ Options:
                         disable dynamic analysis / symolic execution
   -S, --no-static-analysis
                         disable static analysis
+  -s, --simplify        simplify disassembly to human readable code
+  -x, --simplify-show-asm
+                        simplify: show or hide asm annotations in simplified
+                        code
+  -y, --simplify-show-unreachable
+                        simplify: show or hide annotations for unreachable
+                        instructions in simplified code
+  -n NETWORK, --network=NETWORK
+                        network for address lookup (default: mainnet, ropsten,
+                        rinkeby, kovan
 ```
 
-    #> echo "0x12345678" | python3 evmdasm.py
-    #> python3 evmdasm.py 0x12345678
-    #> python3 evmdasm.py ether_contract.evm
-    #> python3 evmdasm.py -a <contract address>
+    #> echo "0x12345678" | python3 -m ethereum_dasm
+    #> python3 -m ethereum_dasm 0x12345678
+    #> python3 -m ethereum_dasm ether_contract.evm
+    #> python3 -m ethereum_dasm -a <contract address>
     #> python3 -m ethereum_dasm -a <contract address>  -A
+    #> python3 -m ethereum_dasm -a <contract address>  --simplify [--simplify-show-asm, --simplify-show-unreachable]
 
 ## features
 
+* disassemble evm bytecode
+* decompile evm bytecode to pseudocode
 * provide the path to the ethereum vm bytecode or the bytecode as an argument to evmdasm. Tries to read from stdin by default.
 * returns !=0 on errors
 * various output modes (`-L` to switch from table to listing mode)
@@ -343,4 +360,257 @@ puts': [], 'stateMutability': None, 'name': 'transfer', 'constant': None, 'input
 reconstructed ABI:
 [{'name': 'enter', 'stateMutability': 'nonpayable', 'signature': '0x124c32a1', 'payable': False, 'inputs': [{'name': '_passcode', 'type': 'bytes32'}, {'name': '_gateKey', 'type': 'bytes8'}], 'constant': False, 'type': 'function', 'outputs': [{'name': '', 'type': 'bool'}]}, {'name': 'maxEntrants', 'stateMutability': 'pure', 'signature': '0x60643652', 'payable': False, 'inputs': [], 'constant': True, 'type': 'function', 'outputs': [{'name': '', 'type': 'uint8'}]}, {'name': 'totalEntrants', 'stateMutability': 'view', 'signature': '0x694463a2', 'payable': False, 'inputs': [], 'constant': True, 'type': 'function', 'outputs': [{'name': '', 'type': 'uint8'}]}, {'name': 'assignAll', 'stateMutability': 'nonpayable', 'signature': '0x90ae631d', 'payable': False, 'inputs': [], 'constant': False, 'type': 'function', 'outputs': [{'name': '', 'type': 'bool'}]}, {'stateMutability': 'nonpayable', 'type': 'constructor', 'payable': False, 'inputs': []}]
 
+```
+
+
+**decompile to pseudocode**
+
+```
+python3 -m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf --simplify #[--simplify-show-asm, --simplify-show-unreachable]
+
+======================[simplified]
+
+:init
+        memory[0x40] = 0x60
+        if (Not(ULE(0x4, 1_calldatasize))) goto LOC_0x48
+        if (And(If(1_calldatasize <= 0x3, 0x0, 1_calldata[0x3]) == 0xa1,
+                If(1_calldatasize <= 0x2, 0x0, 1_calldata[0x2]) == 0x32,
+                If(1_calldatasize <= 0x1, 0x0, 1_calldata[0x1]) == 0x4c,
+                If(1_calldatasize <= 0x0, 0x0, 1_calldata[0x0]) == 0x12)) goto function_enter (LOC_0x4d)
+        if (And(If(1_calldatasize <= 0x3, 0x0, 1_calldata[0x3]) == 0x52,
+                If(1_calldatasize <= 0x2, 0x0, 1_calldata[0x2]) == 0x36,
+                If(1_calldatasize <= 0x1, 0x0, 1_calldata[0x1]) == 0x64,
+                If(1_calldatasize <= 0x0, 0x0, 1_calldata[0x0]) == 0x60)) goto function_maxEntrants (LOC_0x95)
+        if (And(If(1_calldatasize <= 0x3, 0x0, 1_calldata[0x3]) == 0xa2,
+                If(1_calldatasize <= 0x2, 0x0, 1_calldata[0x2]) == 0x63,
+                If(1_calldatasize <= 0x1, 0x0, 1_calldata[0x1]) == 0x44,
+                If(1_calldatasize <= 0x0, 0x0, 1_calldata[0x0]) == 0x69)) goto function_totalEntrants (LOC_0xbe)
+        if (And(If(1_calldatasize <= 0x3, 0x0, 1_calldata[0x3]) == 0x1d,
+                If(1_calldatasize <= 0x2, 0x0, 1_calldata[0x2]) == 0x63,
+                If(1_calldatasize <= 0x1, 0x0, 1_calldata[0x1]) == 0xae,
+                If(1_calldatasize <= 0x0, 0x0, 1_calldata[0x0]) == 0x90)) goto function_assignAll (LOC_0xd1)
+
+:LOC_0x48 
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:function_enter (LOC_0x4d) 
+  /*******************************************************************
+    function enter(bytes32,bytes8)
+    payable: False
+    inputs: (2) ['bytes32', '<bytes??>']
+    potential signatures: ['enter(bytes32,bytes8)']
+  *******************************************************************/
+
+        if (call_value1 == 0x0) goto LOC_0x58
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0x58 
+        goto LOC_0xe4
+
+:LOC_0x81 
+
+:function_maxEntrants (LOC_0x95) 
+  /*******************************************************************
+    function maxEntrants()
+    payable: False
+    inputs: (0) []
+    potential signatures: ['maxEntrants()']
+  *******************************************************************/
+
+        if (call_value1 == 0x0) goto LOC_0xa0
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0xa0 
+        goto LOC_0x314
+
+:LOC_0xa8 
+        memory[0x60] = 0xfa
+        RETURN(offset=0x60, size=0x20)
+        /******* <<terminates execution>> *******/
+
+:function_totalEntrants (LOC_0xbe) 
+  /*******************************************************************
+    function totalEntrants()
+    payable: False
+    inputs: (0) []
+    potential signatures: ['totalEntrants()']
+  *******************************************************************/
+
+        if (call_value1 == 0x0) goto LOC_0xc9
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0xc9 
+        goto LOC_0x31a
+
+:function_assignAll (LOC_0xd1) 
+  /*******************************************************************
+    function assignAll()
+    payable: False
+    inputs: (0) []
+    potential signatures: ['assignAll()']
+  *******************************************************************/
+
+        if (call_value1 == 0x0) goto LOC_0xdc
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0xdc 
+        goto LOC_0x320
+
+:LOC_0xe4 
+        if (Not(Extract(159, 0, origin1) ==
+                0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef)) goto LOC_0x107
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0x107 
+        if (True) goto LOC_0x114
+
+:LOC_0x114 
+        if (bvurem_i(1_gas, 0x1fff) == 0x0) goto LOC_0x11f
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0x11f 
+        if (And(If(1_calldatasize <= 0x29, 0x0, 1_calldata[0x29]) == 0x0,
+                If(1_calldatasize <= 0x28, 0x0, 1_calldata[0x28]) == 0x0)) goto LOC_0x154
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0x154 
+        if (Not(And(If(1_calldatasize <= 0x27, 0x0, 1_calldata[0x27]) ==
+                    0x0,
+                    If(1_calldatasize <= 0x26, 0x0, 1_calldata[0x26]) ==
+                    0x0,
+                    If(1_calldatasize <= 0x25, 0x0, 1_calldata[0x25]) ==
+                    0x0,
+                    If(1_calldatasize <= 0x24, 0x0, 1_calldata[0x24]) ==
+                    0x0))) goto LOC_0x18f
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0x18f 
+        if (And(Extract(7, 0, origin1) ==
+                If(1_calldatasize <= 0x2b, 0x0, 1_calldata[0x2b]),
+                Extract(15, 8, origin1) ==
+                If(1_calldatasize <= 0x2a, 0x0, 1_calldata[0x2a]),
+                If(1_calldatasize <= 0x29, 0x0, 1_calldata[0x29]) == 0x0,
+                If(1_calldatasize <= 0x28, 0x0, 1_calldata[0x28]) == 0x0)) goto LOC_0x1c0
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0x1c0 
+        if (True) goto LOC_0x1d1
+
+:LOC_0x1d1 
+        memory[0x0] = 0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+        memory[0x20] = 0x3
+        if (True) goto LOC_0x1f7
+
+:LOC_0x1f7 
+        memory[0x0] = Concat(0x0, Extract(159, 0, origin1))
+        memory[0x20] = 0x3
+        if (True) goto LOC_0x21d
+
+:LOC_0x21d 
+        memory[0x60] = Concat(If(1_calldatasize <= 0x4, 0x0, 1_calldata[0x4]),
+                   If(1_calldatasize <= 0x5, 0x0, 1_calldata[0x5]),
+                   If(1_calldatasize <= 0x6, 0x0, 1_calldata[0x6]),
+                   If(1_calldatasize <= 0x7, 0x0, 1_calldata[0x7]),
+                   If(1_calldatasize <= 0x8, 0x0, 1_calldata[0x8]),
+                   If(1_calldatasize <= 0x9, 0x0, 1_calldata[0x9]),
+                   If(1_calldatasize <= 0xa, 0x0, 1_calldata[0xa]),
+                   If(1_calldatasize <= 0xb, 0x0, 1_calldata[0xb]),
+                   If(1_calldatasize <= 0xc, 0x0, 1_calldata[0xc]),
+                   If(1_calldatasize <= 0xd, 0x0, 1_calldata[0xd]),
+                   If(1_calldatasize <= 0xe, 0x0, 1_calldata[0xe]),
+                   If(1_calldatasize <= 0xf, 0x0, 1_calldata[0xf]),
+                   If(1_calldatasize <= 0x10, 0x0, 1_calldata[0x10]),
+                   If(1_calldatasize <= 0x11, 0x0, 1_calldata[0x11]),
+                   If(1_calldatasize <= 0x12, 0x0, 1_calldata[0x12]),
+                   If(1_calldatasize <= 0x13, 0x0, 1_calldata[0x13]),
+                   If(1_calldatasize <= 0x14, 0x0, 1_calldata[0x14]),
+                   If(1_calldatasize <= 0x15, 0x0, 1_calldata[0x15]),
+                   If(1_calldatasize <= 0x16, 0x0, 1_calldata[0x16]),
+                   If(1_calldatasize <= 0x17, 0x0, 1_calldata[0x17]),
+                   If(1_calldatasize <= 0x18, 0x0, 1_calldata[0x18]),
+                   If(1_calldatasize <= 0x19, 0x0, 1_calldata[0x19]),
+                   If(1_calldatasize <= 0x1a, 0x0, 1_calldata[0x1a]),
+                   If(1_calldatasize <= 0x1b, 0x0, 1_calldata[0x1b]),
+                   If(1_calldatasize <= 0x1c, 0x0, 1_calldata[0x1c]),
+                   If(1_calldatasize <= 0x1d, 0x0, 1_calldata[0x1d]),
+                   If(1_calldatasize <= 0x1e, 0x0, 1_calldata[0x1e]),
+                   If(1_calldatasize <= 0x1f, 0x0, 1_calldata[0x1f]),
+                   If(1_calldatasize <= 0x20, 0x0, 1_calldata[0x20]),
+                   If(1_calldatasize <= 0x21, 0x0, 1_calldata[0x21]),
+                   If(1_calldatasize <= 0x22, 0x0, 1_calldata[0x22]),
+                   If(1_calldatasize <= 0x23, 0x0, 1_calldata[0x23]))
+        memory[0x0] = KECCAC[If(1_calldatasize_<=_0x4,_0x0,_1_calldata[0x4])]
+        memory[0x20] = 0x4
+        if (False) goto LOC_0x257
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0x257 
+
+:LOC_0x275 
+
+:LOC_0x2d6 
+
+:LOC_0x314 
+
+:LOC_0x317 
+        goto LOC_0xa8
+
+:LOC_0x31a 
+        goto LOC_0xa8
+
+:LOC_0x320 
+        if (False) goto LOC_0x338
+        REVERT(offset=0x0, size=0x0)
+        /******* <<terminates execution>> *******/
+
+:LOC_0x338 
+
+:LOC_0x347 
+
+:LOC_0x3a8 
+
+:LOC_0x3b9 
+
+:LOC_0x3d8 
+
+:LOC_0x3e0 
+
+:LOC_0x3f5 
+
+:LOC_0x459 
+
+:LOC_0x46a 
+
+:LOC_0x4de 
+
+:LOC_0x541 
+
+:LOC_0x552 
+
+:LOC_0x556 
+
+:LOC_0x55e 
+
+:LOC_0x588 
+
+:LOC_0x592 
+
+:LOC_0x5b6 
+
+:LOC_0x5bb 
+
+:LOC_0x5c1 
+
+:LOC_0x5d5 
 ```
