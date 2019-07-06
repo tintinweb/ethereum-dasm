@@ -3,6 +3,10 @@
 # Author : <github.com/tintinweb>
 
 import z3
+import logging
+import mythril.laser.smt
+
+logger = logging.getLogger(__name__)
 
 def pp_hexint(a):
     return z3.z3printer.to_format(get_z3_value_hex(a))
@@ -24,6 +28,8 @@ def get_z3_value_hex(item):
     if (type(item) == int):
         return hex(item)
 
+    elif (type(item) == mythril.laser.smt.bitvec.BitVec and not item.symbolic):
+        return hex(item.value)
     elif (type(item) == z3.BitVecNumRef):
         return hex(item.as_long())
 
@@ -39,6 +45,8 @@ def get_z3_value(item):
     if (type(item) == int):
         return item
 
+    elif (type(item) == mythril.laser.smt.bitvec.BitVec and not item.symbolic):
+        return item.value
     elif (type(item) == z3.BitVecNumRef):
         return item.as_long()
 
@@ -170,7 +178,7 @@ class PseudoCodeStatement(object):
                            (", ".join("%s=%s" % (a, b) for a, b in self.asm.args)))
 
 
-def simplify(evmcode, show_asm=False, show_pseudocode=True):
+def simplify(evmcode, show_asm=False, show_pseudocode=True, show_unreachable=False):
     """
 
     skip:
@@ -198,7 +206,8 @@ def simplify(evmcode, show_asm=False, show_pseudocode=True):
                                     stack=evmcode.symbolic_state_at[instr.address][0][1].mstate.stack if not instr.name in ("JUMPDEST",) else None,
                                     evmcode=evmcode)
         except KeyError as ke:
-            print("\t//Exception @:LOC_%s  [!!!!] <-- exception: %r --> %r" % (hex(instr.address), ke, instr))
+            if show_unreachable: 
+                yield("\t//UnreachableCodeException @:LOC_%s  [!!!!] <-- exception: %r --> %r" % (hex(instr.address), ke, instr))
             continue
 
         if show_asm and asm_stmt:

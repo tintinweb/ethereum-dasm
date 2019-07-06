@@ -58,7 +58,7 @@ class Contract(object):
     Main Input Class
     """
 
-    def __init__(self, bytecode=None, address=None, static_analysis=True, dynamic_analysis=True, network="mainnet"):
+    def __init__(self, bytecode=None, address=None, static_analysis=True, dynamic_analysis=True, network="mainnet", simplify_show_unreachable=False, simplify_show_asm=False):
         if not bytecode and not address:
             raise Exception("missing bytecode or contract address")
 
@@ -70,6 +70,8 @@ class Contract(object):
         self.bytecode, self.auxdata = Contract.get_auxdata(bytecode)
         self._evmcode = EvmCode(contract=self,
                                 static_analysis=static_analysis, dynamic_analysis=dynamic_analysis)  # do not reference this directly, always use self.disassembly()
+        
+        self._simplify_show_unreachable, self._simplify_show_asm = simplify_show_unreachable, simplify_show_asm
 
     @property
     def disassembly(self):
@@ -79,7 +81,10 @@ class Contract(object):
 
     @property
     def simplified(self):
-        return evmsimplify.simplify(self.disassembly)
+        return evmsimplify.simplify(self.disassembly, 
+            show_pseudocode=True, 
+            show_asm=self._simplify_show_asm, 
+            show_unreachable=self._simplify_show_unreachable)
 
     @property
     def methods(self):
@@ -530,7 +535,8 @@ class EvmCode(object):
         for addr, instr in self.jumptable.items():  # all JUMP/I s
             # get symbolic stack
             for node, state in self.symbolic_state_at.get(addr,[]):  # todo investigate keyerror
-                dst = z3.simplify(state.mstate.stack[-1]).as_long() if z3.is_expr(state.mstate.stack[-1]) else state.mstate.stack[-1]
+                dst = get_z3_value(state.mstate.stack[-1])
+                #dst = z3.simplify().as_long() if z3.is_expr(state.mstate.stack[-1]) else get_z3_value(state.mstate.stack[-1])
                 if instr.jumpto and instr.jumpto != dst:  # todo: needs to be a set
                     logger.warning("Symbolic JUMP destination different: %s != %s" % (instr.jumpto, dst))
                 instr.jumpto = dst
@@ -588,6 +594,10 @@ def main():
                       help="disable static analysis")
     parser.add_option("-s", "--simplify", dest="simplify", default=False, action="store_true",
                       help="simplify disassembly to human readable code")
+    parser.add_option("-x", "--simplify-show-asm", dest="simplify_show_asm", default=False, action="store_true",
+                      help="simplify: show or hide asm annotations in simplified code")
+    parser.add_option("-y", "--simplify-show-unreachable", dest="simplify_show_unreachable", default=False, action="store_true",
+                      help="simplify: show or hide annotations for unreachable instructions in simplified code")
     parser.add_option("-n", "--network", dest="network", default="mainnet",
                       help="network for address lookup (default: mainnet, ropsten, rinkeby, kovan")
 
@@ -609,25 +619,32 @@ def main():
     if options.function_signature_lookup and not utils.signatures.ethereum_input_decoder:
         logger.warning("ethereum_input_decoder package not installed. function signature lookup not available.(pip install ethereum-input-decoder)")
 
+    if options.simplify_show_asm or options.simplify_show_unreachable:
+        options.simplify = True
+
     # get bytecode from stdin, or arg:file or arg:bytcode
 
     if options.address:
         contract = Contract(address=options.address,
                             network=options.network,
-                            static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
+                            static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis,
+                            simplify_show_unreachable=options.simplify_show_unreachable, simplify_show_asm=options.simplify_show_asm)
     elif not args:
         contract = Contract(bytecode=sys.stdin.read().strip(),
                             network=options.network,
-                            static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
+                            static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis,
+                            simplify_show_unreachable=options.simplify_show_unreachable, simplify_show_asm=options.simplify_show_asm)
     else:
         if os.path.isfile(args[0]):
             contract = Contract(bytecode=open(args[0], 'r').read(),
                                 network=options.network,
-                                static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
+                                static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis,
+                                simplify_show_unreachable=options.simplify_show_unreachable, simplify_show_asm=options.simplify_show_asm)
         else:
             contract = Contract(bytecode=args[0],
                                 network=options.network,
-                                static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis)
+                                static_analysis=options.static_analysis, dynamic_analysis=options.dynamic_analysis,
+                                simplify_show_unreachable=options.simplify_show_unreachable, simplify_show_asm=options.simplify_show_asm)
 
     #logger.debug(INSTRUCTIONS_BY_OPCODE)
 
