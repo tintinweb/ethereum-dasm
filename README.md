@@ -16,10 +16,16 @@ ethereum evm bytecode disassembler with static- and dynamic-analysis and functio
 
 ## install
 
+### pip
 ```
-#> python3 -m pip install -r requirements*.txt
-#> python3 -m pip install ethereum-dasm[mythril,abidecoder]
-#> python3 -m ethereum-dasm  # verify installation
+#> pip3 install "ethereum-dasm[mythril,abidecoder]"
+#> python3 -m ethereum_dasm --help # verify installation
+```
+
+### code
+```
+#> pip3 install -r requirements*.txt
+#> python3 setup.py install
 ```
 
 ```
