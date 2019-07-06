@@ -530,7 +530,7 @@ class EvmCode(object):
         for addr, instr in self.jumptable.items():  # all JUMP/I s
             # get symbolic stack
             for node, state in self.symbolic_state_at.get(addr,[]):  # todo investigate keyerror
-                dst = z3.simplify(state.mstate.stack[-1]).as_long()
+                dst = z3.simplify(state.mstate.stack[-1]).as_long() if z3.is_expr(state.mstate.stack[-1]) else state.mstate.stack[-1]
                 if instr.jumpto and instr.jumpto != dst:  # todo: needs to be a set
                     logger.warning("Symbolic JUMP destination different: %s != %s" % (instr.jumpto, dst))
                 instr.jumpto = dst
@@ -669,8 +669,11 @@ def main():
     # ------ testing area
 
     # quick check
-    logger.debug("assemble(disassemble(evmcode))==",
-                 contract.bytecode.strip() == ''.join(contract.disassembly.assemble(contract.disassembly.disassemble())))
+    is_equal_assemble_disassemble = contract.bytecode.strip() == ''.join(contract.disassembly.assemble(contract.disassembly.disassemble()))
+    logger.debug("assemble(disassemble(evmcode))==%s"%is_equal_assemble_disassemble)
+    if not is_equal_assemble_disassemble:
+        logger.debug("original:     %s" % contract.bytecode.strip())
+        logger.debug("reassembled:  %s" % ''.join(contract.disassembly.assemble(contract.disassembly.disassemble())))
 
     # -- exit --
     sys.exit(len(contract.disassembly.disassembler.errors))

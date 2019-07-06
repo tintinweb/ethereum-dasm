@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author : <github.com/tintinweb>
 from mythril.analysis.symbolic import SymExecWrapper
-from mythril.ether.ethcontract import ETHContract
+from mythril.ethereum.evmcontract import EVMContract
 
 from collections import defaultdict
 
@@ -205,7 +205,7 @@ class MythrilSymExecGraph(DiGraph):
 
 
 def symbolic_execute(code, address):
-    contract = ETHContract(code)
+    contract = EVMContract(code)
     sym = SymExecWrapper(contract=contract, address=address, strategy="dfs")
 
     # populate graph object
