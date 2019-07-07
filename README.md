@@ -371,8 +371,8 @@ reconstructed ABI:
 
 **decompile to pseudocode**
 
-```
-python3 -m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf --simplify #[--simplify-show-asm, --simplify-show-unreachable]
+`python3 -m ethereum_dasm -a 0x44919b8026f38d70437a8eb3be47b06ab1c3e4bf --simplify #[--simplify-show-asm, --simplify-show-unreachable]`
+```php
 
 ======================[simplified]
 
